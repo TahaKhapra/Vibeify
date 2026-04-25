@@ -1,0 +1,24 @@
+﻿<Window x:Class="VibeMP.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="VibeMP" Height="450" Width="800"
+        Background="#202020">
+
+    <Grid Margin="20">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+
+            <Viewbox Width="40" Height="32" Margin="0,0,12,0">
+                <Canvas Width="130" Height="103">
+                    <Path Fill="White" Data="M81.2334 0C108.149 0.000156743 129.973 21.8251 129.973 48.7402V86.6484C129.973 95.6382 122.716 102.895 113.727 102.896H97.4795V59.5713H119.142V48.7402C119.142 27.7822 102.191 10.8312 81.2334 10.8311C60.2753 10.8311 46.0322 27.7821 46.0322 48.7402V81.2334L46.0234 81.7412C45.6453 92.4003 33.4611 102.896 21.6621 102.896C9.67583 102.895 0.000151912 93.2196 0 81.2334C0 69.247 9.67574 59.5713 21.6621 59.5713C23.5921 59.5713 28.8905 59.5724 32.4932 60.7783V48.7402C32.4932 21.825 54.3182 0 81.2334 0ZM108.311 92.0645H113.727C116.705 92.0643 119.142 89.6269 119.142 86.6484V70.4023H108.311V92.0645ZM21.6621 74.0127C17.6907 74.0127 14.4414 77.262 14.4414 81.2334C14.4416 85.2046 17.6908 88.4541 21.6621 88.4541C25.6334 88.4541 28.8827 85.2047 28.8828 81.2334C28.8828 77.262 25.6335 74.0127 21.6621 74.0127Z M86.6484 97.4795H81.2334V59.5713H86.6484V97.4795Z M73.1094 92.0645H67.6943V64.9863H73.1094V92.0645Z M59.5713 62.2783V83.9404H54.1553V62.2783H59.5713Z" />
+                </Canvas>
+            </Viewbox>
+
+            <TextBlock Text="Vibeify" 
+                       Foreground="White" 
+                       FontSize="24" 
+                       FontFamily="{StaticResource LexendDeca}"
+                       FontWeight="Medium"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</Window>

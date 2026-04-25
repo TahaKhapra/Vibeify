@@ -8,4 +8,29 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Resources\Fonts\LexendDeca-Bold.ttf" />
+    <None Remove="Resources\Fonts\LexendDeca-Medium.ttf" />
+    <None Remove="Resources\Fonts\LexendDeca-Regular.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\" />
+    <Folder Include="Data\" />
+    <Folder Include="Services\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Material.Icons.WPF" Version="3.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.7" />
+    <PackageReference Include="NAudio" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\Fonts\LexendDeca-Bold.ttf" />
+    <Resource Include="Resources\Fonts\LexendDeca-Medium.ttf" />
+    <Resource Include="Resources\Fonts\LexendDeca-Regular.ttf" />
+  </ItemGroup>
+
 </Project>
