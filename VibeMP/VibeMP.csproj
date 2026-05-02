@@ -15,9 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
     <Folder Include="Data\" />
-    <Folder Include="Services\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Models\ITrackMetadata.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,6 +27,9 @@
     <PackageReference Include="Material.Icons.WPF" Version="3.0.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.7" />
     <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
+    <PackageReference Include="SoundTouch.Net.NAudioSupport" Version="2.3.2" />
+    <PackageReference Include="TagLibSharp" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>

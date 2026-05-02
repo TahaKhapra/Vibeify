@@ -5,11 +5,9 @@
              StartupUri="Views/MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/Material.Icons.WPF;component/Resources/Defaults.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-
             <FontFamily x:Key="LexendDeca">pack://application:,,,/Resources/Fonts/#Lexend Deca</FontFamily>
+
+            <!-- crashes due to materialui library, so removed it for now -->
         </ResourceDictionary>
     </Application.Resources>
 </Application>

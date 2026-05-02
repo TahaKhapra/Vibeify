@@ -13,7 +13,8 @@ namespace VibeMP
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-            new MainWindow().Show();
+            // double windows otherwise
+            // new MainWindow().Show();
         }
     }
 
