@@ -4,43 +4,90 @@ namespace VibeMP.Services.BpmAnalysis
 {
     public class BpmAnalyzer
     {
-        public float Analyze(string filePath)
+        public float Analyze(string filePath, bool isRetry = false)
         {
             using (var reader = new AudioFileReader(filePath))
             {
                 var sampleRate = reader.WaveFormat.SampleRate;
                 var channels = reader.WaveFormat.Channels;
+                var bpmVotes = new List<float>();
 
-                float[] sampleResults = new float[3];
-                long[] scanPositions = {reader.Length / 4, reader.Length / 2, (reader.Length / 4) * 3};
+                var lowPassDetect = new SoundTouch.BpmDetect(channels, sampleRate);
+                var highPassDetect = new SoundTouch.BpmDetect(channels, sampleRate);
 
-                for (int i = 0; i < scanPositions.Length; i++)
+                reader.Position = reader.Length / 5;
+                int totalSamples = sampleRate * channels * 45;
+                int samplesRead = 0;
+
+                float[] buffer = new float[8192 * channels];
+                float[] highBuffer = new float[8192 * channels];
+
+                float lpFiltered = 0, hpFiltered = 0;
+                float lpPrev = 0, hpPrev = 0;
+                float lpAlpha = 0.15f;
+                float hpAlpha = 0.65f;
+
+                while (samplesRead < totalSamples)
                 {
-                    var bpmDetect = new SoundTouch.BpmDetect(channels, sampleRate);
-                    reader.Position = scanPositions[i];
+                    int read = reader.Read(buffer, 0, buffer.Length);
+                    if (read <= 0) break;
 
-                    long bytesToRead = (long)(15 * reader.WaveFormat.AverageBytesPerSecond);
-                    long bytesRead = 0;
-                    float[] buffer = new float[4096 * channels];
-                    int read;
-
-                    while ((read = reader.Read(buffer, 0, buffer.Length)) > 0 && bytesRead < bytesToRead)
+                    for (int j = 0; j < read; j++)
                     {
-                        bpmDetect.InputSamples(buffer, read / channels);
-                        bytesRead += (read * sizeof(float));
+                        float rawSample = buffer[j];
+
+                        // Pass 1: Low End (Bass/Kick)
+                        lpFiltered = lpFiltered + lpAlpha * (rawSample - lpFiltered);
+                        float lpFlux = Math.Max(0, Math.Abs(lpFiltered) - lpPrev);
+                        buffer[j] = Math.Clamp(lpFlux * 30f, 0, 1.0f);
+                        lpPrev = Math.Abs(lpFiltered);
+
+                        // Pass 2: High End (Snare/Hats/Jazz Piano)
+                        hpFiltered = hpFiltered + hpAlpha * (rawSample - hpFiltered);
+                        float hpFlux = Math.Max(0, Math.Abs(hpFiltered) - hpPrev);
+                        highBuffer[j] = Math.Clamp(hpFlux * 40f, 0, 1.0f);
+                        hpPrev = Math.Abs(hpFiltered);
                     }
 
-                    sampleResults[i] = bpmDetect.GetBpm();
+                    lowPassDetect.InputSamples(buffer, read / channels);
+                    highPassDetect.InputSamples(highBuffer, read / channels);
+                    samplesRead += read;
                 }
 
-                var validResults = sampleResults.Where(b => b > 0).ToList();
+                float lpBpm = lowPassDetect.GetBpm();
+                float hpBpm = highPassDetect.GetBpm();
 
-                if (!validResults.Any()) return 0;
-                float detectedBpm = validResults.Average();
+                System.Diagnostics.Debug.WriteLine($"Low-Pass: {lpBpm} | High-Pass: {hpBpm}");
 
-                System.Diagnostics.Debug.WriteLine($"Multi-point Analysis for {filePath}: {detectedBpm} BPM");
-                return detectedBpm;
+                var votes = new List<float>();
+                if (lpBpm > 0) votes.Add(lpBpm);
+                if (hpBpm > 0) votes.Add(hpBpm);
+
+                return FinalizeBpm(votes);
             }
+        }
+
+        private float FinalizeBpm(List<float> votes)
+        {
+            if (!votes.Any()) return 0;
+
+            var grouped = votes.GroupBy(v => Math.Round(v / 3.0) * 3.0)
+                               .OrderByDescending(g => g.Count())
+                               .First();
+
+            float consensus = grouped.Average();
+
+            while (consensus < 85)
+            {
+                consensus *= 2;
+            }
+
+            while (consensus > 155)
+            {
+                consensus /= 2;
+            }
+
+            return (float)Math.Round(consensus, 2);
         }
     }
 }
