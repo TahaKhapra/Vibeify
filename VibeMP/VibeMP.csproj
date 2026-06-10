@@ -15,17 +15,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Data\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Models\ITrackMetadata.cs" />
+    <None Include="Core\Interfaces\ITrackMetadata.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Material.Icons.WPF" Version="3.0.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.8" />
     <PackageReference Include="NAudio" Version="2.3.0" />
     <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
     <PackageReference Include="SoundTouch.Net.NAudioSupport" Version="2.3.2" />

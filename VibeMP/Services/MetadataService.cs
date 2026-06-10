@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using VibeMP.Core.Interfaces;
 using VibeMP.Models;
 
@@ -13,7 +15,11 @@ namespace VibeMP.Services
                 if (!File.Exists(filePath))
                     throw new FileNotFoundException("Audio file not found", filePath);
 
-                var track = new Track(filePath);
+                var track = new Track
+                {
+                    FilePath = filePath,
+                    DateAnalyzed = DateTime.Now
+                };
 
                 try
                 {
@@ -22,24 +28,12 @@ namespace VibeMP.Services
                         track.Title = !string.IsNullOrEmpty(tFile.Tag.Title)
                                       ? tFile.Tag.Title
                                       : Path.GetFileNameWithoutExtension(filePath);
-
-                        track.Artist = !string.IsNullOrEmpty(tFile.Tag.FirstPerformer)
-                                       ? tFile.Tag.FirstPerformer
-                                       : "Unknown Artist";
-
-                        track.Album = tFile.Tag.Album ?? "Unknown Album";
-                        track.Duration = tFile.Properties.Duration;
-
-                        if (tFile.Tag.Pictures != null && tFile.Tag.Pictures.Length > 0)
-                        {
-                            var pic = tFile.Tag.Pictures[0];
-                            track.AlbumArt = pic.Data.Data;
-                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Error parsing metadata: {ex.Message}");
+                    track.Title = Path.GetFileNameWithoutExtension(filePath);
                 }
 
                 return track;
