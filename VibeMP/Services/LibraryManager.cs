@@ -17,13 +17,18 @@ namespace VibeMP.Services
             db.Database.EnsureCreated();
         }
 
-        public async Task ImportFolderAsync(string folderPath, Action<string, int, int>? onProgress = null)
+        public async Task ImportFilesAsync(
+            IEnumerable<string> filePaths,
+            Action<string, int, int>? onProgress = null
+        )
         {
-            if (!Directory.Exists(folderPath)) return;
-
-            var allFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
-            var audioFiles = allFiles
-                .Where(f => _supportedExtensions.Contains(Path.GetExtension(f).ToLower()))
+            var audioFiles = filePaths
+                .Where(f =>
+                    _supportedExtensions.Contains(
+                        Path.GetExtension(f),
+                        StringComparer.OrdinalIgnoreCase
+                    )
+                )
                 .ToList();
 
             int totalFiles = audioFiles.Count;
@@ -34,14 +39,14 @@ namespace VibeMP.Services
                 foreach (var file in audioFiles)
                 {
                     processedCount++;
-
                     onProgress?.Invoke(Path.GetFileName(file), processedCount, totalFiles);
 
                     try
                     {
                         using var db = new LibraryContext();
 
-                        if (await db.Tracks.AnyAsync(t => t.FilePath == file)) continue;
+                        if (await db.Tracks.AnyAsync(t => t.FilePath == file))
+                            continue;
 
                         float bpm = _analyzer.Analyze(file);
 
@@ -50,7 +55,7 @@ namespace VibeMP.Services
                             FilePath = file,
                             Title = Path.GetFileNameWithoutExtension(file),
                             Bpm = bpm,
-                            DateAnalyzed = DateTime.Now
+                            DateAnalyzed = DateTime.Now,
                         };
 
                         db.Tracks.Add(track);
@@ -62,6 +67,27 @@ namespace VibeMP.Services
                     }
                 }
             });
+        }
+
+        public async Task ImportPathsAsync(IEnumerable<string> paths)
+        {
+            var files = new List<string>();
+
+            foreach (var path in paths)
+            {
+                if (File.Exists(path))
+                {
+                    files.Add(path);
+                }
+                else if (Directory.Exists(path))
+                {
+                    files.AddRange(
+                        Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
+                    );
+                }
+            }
+
+            await ImportFilesAsync(files);
         }
     }
 }

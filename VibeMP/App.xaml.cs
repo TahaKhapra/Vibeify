@@ -25,16 +25,16 @@ namespace VibeMP
                     new VibeCategory
                     {
                         Name = "Studying",
-                        MinBpm = 60f,
+                        MinBpm = 70f,
                         MaxBpm = 90f,
-                        IsPreset = true
+                        IsPreset = true,
                     },
                     new VibeCategory
                     {
                         Name = "Gaming",
-                        MinBpm = 125f,
-                        MaxBpm = 175f,
-                        IsPreset = true
+                        MinBpm = 110f,
+                        MaxBpm = 130f,
+                        IsPreset = true,
                     }
                 );
 
