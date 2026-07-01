@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.IO;
+using Microsoft.EntityFrameworkCore;
 using VibeMP.Models;
 
 namespace VibeMP.Data
@@ -10,7 +11,12 @@ namespace VibeMP.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlite("Data Source=vibeify.db");
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string dbFolder = Path.Combine(appData, "Vibeify");
+            Directory.CreateDirectory(dbFolder);
+
+            string dbPath = Path.Combine(dbFolder, "vibeify.db");
+            optionsBuilder.UseSqlite($"Data Source={dbPath}");
         }
     }
 }

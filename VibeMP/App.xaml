@@ -1,13 +1,17 @@
-﻿<Application x:Class="VibeMP.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:VibeMP"
-             StartupUri="Views/MainWindow.xaml">
-    <Application.Resources>
-        <ResourceDictionary>
-            <FontFamily x:Key="LexendDeca">pack://application:,,,/Resources/Fonts/#Lexend Deca</FontFamily>
+﻿<Application
+  x:Class="VibeMP.App"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="clr-namespace:VibeMP"
+  StartupUri="Views/MainWindow.xaml"
+>
+  <Application.Resources>
+    <ResourceDictionary>
+      <FontFamily x:Key="LexendDeca">
+        pack://application:,,,/Resources/Fonts/#Lexend Deca
+      </FontFamily>
 
-            <!-- crashes due to materialui library, so removed it for now -->
-        </ResourceDictionary>
-    </Application.Resources>
+      <!-- crashes due to materialui library, so removed it for now -->
+    </ResourceDictionary>
+  </Application.Resources>
 </Application>

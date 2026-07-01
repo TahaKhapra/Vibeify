@@ -4,6 +4,6 @@
     {
         Stopped,
         Playing,
-        Paused
+        Paused,
     }
 }
