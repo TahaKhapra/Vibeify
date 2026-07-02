@@ -139,6 +139,53 @@ namespace VibeMP.Views
                 );
         }
 
-        private void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) { }
+        private void PreviewMouseWheel_BubblingFix(
+            object sender,
+            System.Windows.Input.MouseWheelEventArgs e
+        )
+        {
+            if (!e.Handled)
+            {
+                e.Handled = true;
+                var eventArg = new System.Windows.Input.MouseWheelEventArgs(
+                    e.MouseDevice,
+                    e.Timestamp,
+                    e.Delta
+                )
+                {
+                    RoutedEvent = UIElement.MouseWheelEvent,
+                    Source = sender,
+                };
+
+                if (sender is FrameworkElement frameworkElement)
+                {
+                    var parent = frameworkElement.Parent as UIElement;
+                    parent?.RaiseEvent(eventArg);
+                }
+            }
+        }
+
+        public bool IsDraggingProgress { get; private set; } = false;
+
+        private void ProgressBar_DragStarted(
+            object sender,
+            System.Windows.Controls.Primitives.DragStartedEventArgs e
+        )
+        {
+            IsDraggingProgress = true;
+        }
+
+        private void ProgressBar_DragCompleted(
+            object sender,
+            System.Windows.Controls.Primitives.DragCompletedEventArgs e
+        )
+        {
+            if (sender is Slider slider && DataContext is MainViewModel viewModel)
+            {
+                viewModel.SeekToPosition(slider.Value);
+            }
+
+            IsDraggingProgress = false;
+        }
     }
 }

@@ -5,5 +5,6 @@
         Onboarding,
         BpmFixer,
         Dashboard,
+        Settings,
     }
 }

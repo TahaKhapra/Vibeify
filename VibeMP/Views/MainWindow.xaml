@@ -4,6 +4,7 @@
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:local="clr-namespace:VibeMP"
   xmlns:vms="clr-namespace:VibeMP.ViewModels"
   xmlns:models="clr-namespace:VibeMP.Models"
   mc:Ignorable="d"
@@ -20,6 +21,7 @@
   </Window.DataContext>
 
   <Window.Resources>
+    <local:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter" />
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
     <Style x:Key="OnboardingVisibilityStyle" TargetType="FrameworkElement">
@@ -192,6 +194,409 @@
   </Window.Resources>
 
   <Grid>
+    <Grid>
+      <Grid.Style>
+        <Style TargetType="Grid">
+          <Setter Property="Visibility" Value="Collapsed" />
+          <Style.Triggers>
+            <DataTrigger
+              Binding="{Binding CurrentViewState}"
+              Value="{x:Static models:AppViewState.Settings}"
+            >
+              <Setter Property="Visibility" Value="Visible" />
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </Grid.Style>
+
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <StackPanel
+        Grid.Row="0"
+        Orientation="Horizontal"
+        HorizontalAlignment="Center"
+        Margin="0,40,0,0"
+      >
+        <Viewbox Width="54" Height="42" Margin="0,0,16,0">
+          <Canvas Width="130" Height="103">
+            <Path
+              Fill="White"
+              Data="M81.2334 0C108.149 0.000156743 129.973 21.8251 129.973 48.7402V86.6484C129.973 95.6382 122.716 102.895 113.727 102.896H97.4795V59.5713H119.142V48.7402C119.142 27.7822 102.191 10.8312 81.2334 10.8311C60.2753 10.8311 46.0322 27.7821 46.0322 48.7402V81.2334L46.0234 81.7412C45.6453 92.4003 33.4611 102.896 21.6621 102.896C9.67583 102.895 0.000151912 93.2196 0 81.2334C0 69.247 9.67574 59.5713 21.6621 59.5713C23.5921 59.5713 28.8905 59.5724 32.4932 60.7783V48.7402C32.4932 21.825 54.3182 0 81.2334 0ZM108.311 92.0645H113.727C116.705 92.0643 119.142 89.6269 119.142 86.6484V70.4023H108.311V92.0645ZM21.6621 74.0127C17.6907 74.0127 14.4414 77.262 14.4414 81.2334C14.4416 85.2046 17.6908 88.4541 21.6621 88.4541C25.6334 88.4541 28.8827 85.2047 28.8828 81.2334C28.8828 77.262 25.6335 74.0127 21.6621 74.0127Z M86.6484 97.4795H81.2334V59.5713H86.6484V97.4795Z M73.1094 92.0645H67.6943V64.9863H73.1094V92.0645Z M59.5713 62.2783V83.9404H54.1553V62.2783H59.5713Z"
+            />
+          </Canvas>
+        </Viewbox>
+        <TextBlock
+          Text="Vibeify"
+          Foreground="White"
+          FontSize="36"
+          FontWeight="Bold"
+          VerticalAlignment="Center"
+        />
+      </StackPanel>
+
+      <Grid
+        Grid.Row="1"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Top"
+        Margin="0,30,0,0"
+        Width="760"
+      >
+        <Grid.RowDefinitions>
+          <RowDefinition Height="300" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="340" />
+          <ColumnDefinition Width="80" />
+          <ColumnDefinition Width="340" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Row="0" Grid.Column="0">
+          <Button
+            Command="{Binding AddFilesCommand}"
+            Background="Transparent"
+            BorderThickness="0"
+            Padding="0"
+            Cursor="Hand"
+            HorizontalContentAlignment="Stretch"
+            VerticalContentAlignment="Stretch"
+          >
+            <Button.Template>
+              <ControlTemplate TargetType="Button">
+                <Grid Background="Transparent">
+                  <Grid.Style>
+                    <Style TargetType="Grid">
+                      <Setter Property="Visibility" Value="Collapsed" />
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding PendingImportPaths.Count}" Value="0">
+                          <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Grid.Style>
+
+                  <Rectangle
+                    Stroke="#333333"
+                    StrokeThickness="2"
+                    StrokeDashArray="4 4"
+                    RadiusX="12"
+                    RadiusY="12"
+                    Fill="#1C1C1C"
+                  />
+
+                  <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Path
+                      Data="M4 4H10L12 6H20V18H4V4Z"
+                      Stroke="#555555"
+                      StrokeThickness="2"
+                      Fill="Transparent"
+                      Width="42"
+                      Height="36"
+                      Stretch="Fill"
+                      Margin="0,0,0,16"
+                      HorizontalAlignment="Center"
+                    />
+                    <TextBlock
+                      Text="Add more tracks"
+                      TextAlignment="Center"
+                      Foreground="#777777"
+                      FontSize="15"
+                      FontWeight="Medium"
+                      LineHeight="22"
+                    />
+                  </StackPanel>
+                </Grid>
+              </ControlTemplate>
+            </Button.Template>
+          </Button>
+
+          <Grid AllowDrop="True" Drop="Window_Drop">
+            <Grid.Style>
+              <Style TargetType="Grid">
+                <Setter Property="Visibility" Value="Visible" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding PendingImportPaths.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Grid.Style>
+
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Button
+              Grid.Row="0"
+              Command="{Binding AddFilesCommand}"
+              HorizontalContentAlignment="Stretch"
+              Cursor="Hand"
+              Margin="0,0,0,10"
+            >
+              <Button.Template>
+                <ControlTemplate TargetType="Button">
+                  <Border
+                    Background="#1C1C1C"
+                    BorderBrush="#333333"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="10,8"
+                  >
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                      <TextBlock
+                        Text="+"
+                        Foreground="#FFFFFF"
+                        FontWeight="Bold"
+                        FontSize="14"
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                      />
+                      <TextBlock
+                        Text="Drop more folders or click here"
+                        Foreground="#999999"
+                        FontSize="12"
+                        VerticalAlignment="Center"
+                      />
+                    </StackPanel>
+                  </Border>
+                </ControlTemplate>
+              </Button.Template>
+            </Button>
+
+            <Border
+              Grid.Row="1"
+              Background="#141414"
+              CornerRadius="6"
+              BorderBrush="#222222"
+              BorderThickness="1"
+            >
+              <ListBox
+                ItemsSource="{Binding PendingImportPaths}"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="5"
+              >
+                <ListBox.Resources>
+                  <SolidColorBrush
+                    x:Key="{x:Static SystemColors.HighlightBrushKey}"
+                    Color="#252525"
+                  />
+                  <SolidColorBrush
+                    x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"
+                    Color="#1A1A1A"
+                  />
+                </ListBox.Resources>
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="4,3">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <Path
+                        Grid.Column="0"
+                        Data="M21,3V15.5A3.5,3.5 0 0,1 17.5,19A3.5,3.5 0 0,1 14,15.5A3.5,3.5 0 0,1 17.5,12C18.04,12 18.55,12.12 19,12.34V6.47L9,8.6V17.5A3.5,3.5 0 0,1 5.5,21A3.5,3.5 0 0,1 2,17.5A3.5,3.5 0 0,1 5.5,14C6.04,14 6.55,14.12 7,14.34V6L21,3Z"
+                        Fill="#FFFFFF"
+                        Width="12"
+                        Height="12"
+                        Margin="0,0,8,0"
+                        Stretch="Fill"
+                        VerticalAlignment="Center"
+                      />
+                      <TextBlock
+                        Grid.Column="1"
+                        Text="{Binding DisplayName}"
+                        Foreground="#CCCCCC"
+                        FontSize="11"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTip="{Binding FullPath}"
+                      />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Border>
+          </Grid>
+        </Grid>
+
+        <Grid Grid.Row="0" Grid.Column="2">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+          </Grid.RowDefinitions>
+
+          <Grid Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock
+              Text="Categories"
+              Foreground="#888888"
+              FontSize="15"
+              FontWeight="Bold"
+              HorizontalAlignment="Left"
+              VerticalAlignment="Center"
+              Margin="4,0,0,0"
+            />
+            <TextBlock
+              Text="Target BPM"
+              Foreground="#888888"
+              FontSize="15"
+              FontWeight="Bold"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Center"
+              Margin="0,0,30,0"
+            />
+          </Grid>
+
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+              <ItemsControl ItemsSource="{Binding Categories}" Margin="0,0,0,10">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="0,0,0,10">
+                      <Border
+                        Background="#222222"
+                        CornerRadius="4"
+                        Padding="12,8"
+                        HorizontalAlignment="Left"
+                        Width="140"
+                      >
+                        <TextBox
+                          Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                          Style="{StaticResource InlineTextBox}"
+                          Foreground="White"
+                          FontSize="14"
+                        />
+                      </Border>
+
+                      <StackPanel
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                      >
+                        <Button
+                          Content="+"
+                          Style="{StaticResource CircleBpmButton}"
+                          Command="{Binding DataContext.IncrementBpmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                          CommandParameter="{Binding}"
+                        />
+                        <TextBlock
+                          Text="{Binding MaxBpm}"
+                          Foreground="White"
+                          FontSize="14"
+                          Width="50"
+                          TextAlignment="Center"
+                          VerticalAlignment="Center"
+                        />
+                        <Button
+                          Content="-"
+                          Style="{StaticResource CircleBpmButton}"
+                          Command="{Binding DataContext.DecrementBpmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                          CommandParameter="{Binding}"
+                        />
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <Button
+                Command="{Binding AddCategoryCommand}"
+                Cursor="Hand"
+                Height="42"
+                Margin="0,4,0,10"
+              >
+                <Button.Template>
+                  <ControlTemplate TargetType="Button">
+                    <Grid>
+                      <Rectangle
+                        Stroke="#333333"
+                        StrokeThickness="1.5"
+                        StrokeDashArray="4 4"
+                        RadiusX="6"
+                        RadiusY="6"
+                        Fill="#1C1C1C"
+                      />
+                      <StackPanel
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                      >
+                        <TextBlock
+                          Text="+"
+                          Foreground="#777777"
+                          FontWeight="Bold"
+                          FontSize="16"
+                          Margin="0,0,8,1"
+                          VerticalAlignment="Center"
+                        />
+                        <TextBlock
+                          Text="Add custom category"
+                          Foreground="#777777"
+                          FontSize="13"
+                          FontWeight="Medium"
+                          VerticalAlignment="Center"
+                        />
+                      </StackPanel>
+                    </Grid>
+                  </ControlTemplate>
+                </Button.Template>
+              </Button>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+
+        <Button
+          Grid.Row="1"
+          Grid.Column="0"
+          Grid.ColumnSpan="3"
+          Command="{Binding CloseSettingsCommand}"
+          Content="Save &amp; Return"
+          Padding="0,14"
+          Margin="0,30,0,0"
+          Foreground="Black"
+          BorderThickness="0"
+          FontWeight="SemiBold"
+          Cursor="Hand"
+        >
+          <Button.Style>
+            <Style TargetType="Button">
+              <Setter Property="Background" Value="White" />
+              <Setter Property="Template">
+                <Setter.Value>
+                  <ControlTemplate TargetType="Button">
+                    <Border
+                      x:Name="ButtonBorder"
+                      Background="{TemplateBinding Background}"
+                      CornerRadius="6"
+                    >
+                      <ContentPresenter
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Margin="{TemplateBinding Padding}"
+                      />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                      <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="ButtonBorder" Property="Background" Value="#EEEEEE" />
+                      </Trigger>
+                      <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="ButtonBorder" Property="Background" Value="#333333" />
+                        <Setter Property="Foreground" Value="#666666" />
+                      </Trigger>
+                    </ControlTemplate.Triggers>
+                  </ControlTemplate>
+                </Setter.Value>
+              </Setter>
+            </Style>
+          </Button.Style>
+        </Button>
+      </Grid>
+    </Grid>
+
     <Grid Style="{StaticResource DashboardVisibilityStyle}">
       <Grid.RowDefinitions>
         <RowDefinition Height="*" />
@@ -215,8 +620,8 @@
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
           <Button
@@ -270,75 +675,136 @@
             Margin="8,0,0,16"
           />
 
-          <ListBox
+          <ScrollViewer
             Grid.Row="2"
-            ItemsSource="{Binding Categories}"
-            SelectedItem="{Binding SelectedCategory}"
+            VerticalScrollBarVisibility="Auto"
+            HorizontalScrollBarVisibility="Disabled"
+            Margin="0,0,0,16"
+          >
+            <ListBox
+              ItemsSource="{Binding Categories}"
+              SelectedItem="{Binding SelectedCategory}"
+              Background="Transparent"
+              BorderThickness="0"
+            >
+              <ListBox.Resources>
+                <SolidColorBrush
+                  x:Key="{x:Static SystemColors.HighlightBrushKey}"
+                  Color="#282828"
+                />
+                <SolidColorBrush
+                  x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"
+                  Color="#1A1A1A"
+                />
+              </ListBox.Resources>
+              <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                  <Setter Property="Template">
+                    <Setter.Value>
+                      <ControlTemplate TargetType="ListBoxItem">
+                        <Border
+                          Background="{TemplateBinding Background}"
+                          CornerRadius="4"
+                          Padding="12,8"
+                          Margin="0,2"
+                        >
+                          <ContentPresenter />
+                        </Border>
+                      </ControlTemplate>
+                    </Setter.Value>
+                  </Setter>
+                </Style>
+              </ListBox.ItemContainerStyle>
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid Background="Transparent" Cursor="Hand">
+                    <Grid.InputBindings>
+                      <MouseBinding
+                        Gesture="LeftClick"
+                        Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}"
+                      />
+                    </Grid.InputBindings>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Path
+                      Grid.Column="0"
+                      Data="M19,15H15A3,3 0 0,1 12,18A3,3 0 0,1 9,15H5V5H19M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z"
+                      Fill="#A7A7A7"
+                      Width="16"
+                      Height="16"
+                      Margin="0,0,12,0"
+                      Stretch="Fill"
+                      VerticalAlignment="Center"
+                    />
+                    <TextBlock
+                      Grid.Column="1"
+                      Text="{Binding Name}"
+                      Foreground="White"
+                      FontSize="14"
+                      FontWeight="SemiBold"
+                      VerticalAlignment="Center"
+                      TextTrimming="CharacterEllipsis"
+                    />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </ScrollViewer>
+
+          <Button
+            Grid.Row="3"
+            Command="{Binding OpenSettingsCommand}"
             Background="Transparent"
             BorderThickness="0"
+            Cursor="Hand"
           >
-            <ListBox.Resources>
-              <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#282828" />
-              <SolidColorBrush
-                x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"
-                Color="#1A1A1A"
-              />
-            </ListBox.Resources>
-            <ListBox.ItemContainerStyle>
-              <Style TargetType="ListBoxItem">
-                <Setter Property="Template">
-                  <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                      <Border
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="4"
-                        Padding="12,8"
-                        Margin="0,2"
-                      >
-                        <ContentPresenter />
-                      </Border>
-                    </ControlTemplate>
-                  </Setter.Value>
-                </Setter>
-              </Style>
-            </ListBox.ItemContainerStyle>
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <Grid Background="Transparent" Cursor="Hand">
-                  <Grid.InputBindings>
-                    <MouseBinding
-                      Gesture="LeftClick"
-                      Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                      CommandParameter="{Binding}"
+            <Button.Template>
+              <ControlTemplate TargetType="Button">
+                <Border
+                  x:Name="SettingsBorder"
+                  Background="{TemplateBinding Background}"
+                  CornerRadius="4"
+                  Padding="12,8"
+                >
+                  <StackPanel Orientation="Horizontal">
+                    <Path
+                      x:Name="SettingsIcon"
+                      Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+                      Fill="White"
+                      Width="16"
+                      Height="16"
+                      Margin="0,0,12,0"
+                      Stretch="Fill"
+                      VerticalAlignment="Center"
                     />
-                  </Grid.InputBindings>
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                  </Grid.ColumnDefinitions>
-                  <Path
-                    Grid.Column="0"
-                    Data="M19,15H15A3,3 0 0,1 12,18A3,3 0 0,1 9,15H5V5H19M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z"
-                    Fill="#A7A7A7"
-                    Width="16"
-                    Height="16"
-                    Margin="0,0,12,0"
-                    Stretch="Fill"
-                    VerticalAlignment="Center"
-                  />
-                  <TextBlock
-                    Grid.Column="1"
-                    Text="{Binding Name}"
-                    Foreground="White"
-                    FontSize="14"
-                    FontWeight="SemiBold"
-                    VerticalAlignment="Center"
-                    TextTrimming="CharacterEllipsis"
-                  />
-                </Grid>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+                    <TextBlock
+                      Text="Settings"
+                      Foreground="White"
+                      FontSize="14"
+                      FontWeight="SemiBold"
+                      VerticalAlignment="Center"
+                    />
+                  </StackPanel>
+                </Border>
+                <ControlTemplate.Triggers>
+                  <DataTrigger
+                    Binding="{Binding CurrentViewState}"
+                    Value="{x:Static models:AppViewState.Settings}"
+                  >
+                    <Setter TargetName="SettingsBorder" Property="Background" Value="#282828" />
+                    <Setter TargetName="SettingsIcon" Property="Fill" Value="White" />
+                  </DataTrigger>
+                  <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="SettingsBorder" Property="Background" Value="#1A1A1A" />
+                    <Setter TargetName="SettingsIcon" Property="Fill" Value="White" />
+                  </Trigger>
+                </ControlTemplate.Triggers>
+              </ControlTemplate>
+            </Button.Template>
+          </Button>
         </Grid>
       </Border>
 
@@ -412,7 +878,6 @@
             RowHeaderWidth="0"
             GridLinesVisibility="None"
             HorizontalScrollBarVisibility="Disabled"
-            SelectionChanged="DataGrid_SelectionChanged"
           >
             <DataGrid.Resources>
               <Style TargetType="DataGridColumnHeader">
@@ -575,7 +1040,10 @@
                 Margin="0,0,0,32"
               />
 
-              <ItemsControl ItemsSource="{Binding Categories}">
+              <ItemsControl
+                ItemsSource="{Binding Categories}"
+                PreviewMouseWheel="PreviewMouseWheel_BubblingFix"
+              >
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Border Background="#1A1A1A" CornerRadius="8" Padding="20" Margin="0,0,0,24">
@@ -619,6 +1087,7 @@
                         <ScrollViewer
                           HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled"
+                          PreviewMouseWheel="PreviewMouseWheel_BubblingFix"
                         >
                           <ListBox
                             ItemsSource="{Binding CategoryTracks}"
@@ -964,7 +1433,7 @@
               </Grid.ColumnDefinitions>
               <TextBlock
                 Grid.Column="0"
-                Text="{Binding PlaybackPositionString, TargetNullValue='0:00'}"
+                Text="{Binding PlaybackPositionString, TargetNullValue='', FallbackValue=''}"
                 Foreground="#A7A7A7"
                 FontSize="11"
                 Margin="0,0,8,0"
@@ -974,29 +1443,89 @@
                 Grid.Column="1"
                 Value="{Binding PlaybackProgressSeconds}"
                 Maximum="{Binding PlaybackDurationSeconds}"
-                Background="#535353"
-                Foreground="White"
                 VerticalAlignment="Center"
                 Focusable="False"
+                Thumb.DragStarted="ProgressBar_DragStarted"
+                Thumb.DragCompleted="ProgressBar_DragCompleted"
               >
                 <Slider.Style>
                   <Style TargetType="Slider">
                     <Setter Property="Template">
                       <Setter.Value>
                         <ControlTemplate TargetType="Slider">
-                          <Grid VerticalAlignment="Center">
+                          <Grid
+                            x:Name="SliderContainer"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            Height="12"
+                          >
                             <Border
-                              Background="#535353"
+                              Background="#282828"
                               Height="4"
                               CornerRadius="2"
                               VerticalAlignment="Center"
+                              SnapsToDevicePixels="True"
                             />
+
                             <Track x:Name="PART_Track">
                               <Track.DecreaseRepeatButton>
-                                <RepeatButton Background="#1DB954" Height="4" BorderThickness="0" />
+                                <RepeatButton Command="Slider.DecreaseLarge">
+                                  <RepeatButton.Template>
+                                    <ControlTemplate TargetType="RepeatButton">
+                                      <Border
+                                        Height="4"
+                                        CornerRadius="2,0,0,2"
+                                        SnapsToDevicePixels="True"
+                                      >
+                                        <Border.Style>
+                                          <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#282828" />
+                                            <Style.Triggers>
+                                              <DataTrigger
+                                                Binding="{Binding PlaybackProgressSeconds, RelativeSource={RelativeSource AncestorType=Slider}, Converter={StaticResource GreaterThanZeroConverter}}"
+                                                Value="True"
+                                              >
+                                                <Setter Property="Background" Value="White" />
+                                              </DataTrigger>
+                                            </Style.Triggers>
+                                          </Style>
+                                        </Border.Style>
+                                      </Border>
+                                    </ControlTemplate>
+                                  </RepeatButton.Template>
+                                </RepeatButton>
                               </Track.DecreaseRepeatButton>
+
                               <Track.Thumb>
-                                <Thumb Width="0" Height="0" />
+                                <Thumb Cursor="Hand">
+                                  <Thumb.Template>
+                                    <ControlTemplate TargetType="Thumb">
+                                      <Grid Background="Transparent">
+                                        <Border
+                                          x:Name="ThumbVisual"
+                                          Width="12"
+                                          Height="12"
+                                          Background="White"
+                                          CornerRadius="6"
+                                          RenderOptions.EdgeMode="Aliased"
+                                          Visibility="Collapsed"
+                                        />
+                                      </Grid>
+                                      <ControlTemplate.Triggers>
+                                        <DataTrigger
+                                          Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Slider}}"
+                                          Value="True"
+                                        >
+                                          <Setter
+                                            TargetName="ThumbVisual"
+                                            Property="Visibility"
+                                            Value="Visible"
+                                          />
+                                        </DataTrigger>
+                                      </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                  </Thumb.Template>
+                                </Thumb>
                               </Track.Thumb>
                             </Track>
                           </Grid>
@@ -1008,7 +1537,7 @@
               </Slider>
               <TextBlock
                 Grid.Column="2"
-                Text="{Binding PlaybackDurationString, TargetNullValue='0:00'}"
+                Text="{Binding PlaybackDurationString, TargetNullValue='', FallbackValue=''}"
                 Foreground="#A7A7A7"
                 FontSize="11"
                 Margin="8,0,0,0"
