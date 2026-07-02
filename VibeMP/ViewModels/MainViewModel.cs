@@ -1,8 +1,8 @@
-﻿using System.Collections.ObjectModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using VibeMP.Data;
 using VibeMP.Models;
 using VibeMP.Services;
@@ -26,6 +26,8 @@ namespace VibeMP.ViewModels
         [NotifyCanExecuteChangedFor(nameof(CompleteOnboardingCommand))]
         private bool _isProcessing;
 
+        private int _activeImportCount = 0;
+
         [ObservableProperty]
         private string _statusText = "";
 
@@ -37,17 +39,41 @@ namespace VibeMP.ViewModels
 
         [ObservableProperty]
         private bool _hasPendingImports;
-
         public ObservableCollection<PendingItem> PendingImportPaths { get; } = new();
         public ObservableCollection<Track> ZeroBpmTracks { get; } = new();
 
-        // Dynamic collection for the UI list
         public ObservableCollection<VibeCategory> Categories { get; } = new();
+
+        public ObservableCollection<Track> DashboardTracks { get; } = new();
+
+        [ObservableProperty]
+        private VibeCategory? _selectedCategory;
+
+        [ObservableProperty]
+        private Track? _selectedTrack;
+
+        private System.Windows.Media.MediaPlayer _mediaPlayer = new();
+
+        [ObservableProperty]
+        private bool _isPlaying;
+
+        [ObservableProperty]
+        private bool _isHomeSelected = true;
+
+        partial void OnSelectedCategoryChanged(VibeCategory? value)
+        {
+            if (value != null)
+            {
+                IsHomeSelected = false;
+            }
+            UpdateDashboardTracks();
+        }
 
         private bool CanCompleteOnboarding() => !IsProcessing && PendingImportPaths.Count > 0;
 
         public MainViewModel()
         {
+            _mediaPlayer.MediaEnded += (s, e) => PlayNextTrack();
             LoadCategoriesFromDb();
         }
 
@@ -64,24 +90,22 @@ namespace VibeMP.ViewModels
 
             if (Categories.Count == 0)
             {
-                Categories.Add(
-                    new VibeCategory
-                    {
-                        Name = "Gaming",
-                        MaxBpm = 120,
-                        MinBpm = 0,
-                        IsPreset = true,
-                    }
-                );
-                Categories.Add(
-                    new VibeCategory
-                    {
-                        Name = "Studying",
-                        MaxBpm = 80,
-                        MinBpm = 0,
-                        IsPreset = true,
-                    }
-                );
+                var gaming = new VibeCategory
+                {
+                    Name = "Gaming",
+                    MaxBpm = 120,
+                    MinBpm = 0,
+                    IsPreset = true,
+                };
+                var studying = new VibeCategory
+                {
+                    Name = "Studying",
+                    MaxBpm = 80,
+                    MinBpm = 0,
+                    IsPreset = true,
+                };
+                Categories.Add(gaming);
+                Categories.Add(studying);
             }
         }
 
@@ -102,7 +126,6 @@ namespace VibeMP.ViewModels
                 }
                 else
                 {
-                    // Brand new category added via the plus button
                     db.Categories.Add(uiCategory);
                 }
             }
@@ -130,9 +153,9 @@ namespace VibeMP.ViewModels
             if (category != null)
             {
                 category.MaxBpm++;
-                // Explicitly poke the collection to refresh UI targets
                 int index = Categories.IndexOf(category);
                 Categories[index] = category;
+                UpdateDashboardTracks();
             }
         }
 
@@ -144,6 +167,7 @@ namespace VibeMP.ViewModels
                 category.MaxBpm--;
                 int index = Categories.IndexOf(category);
                 Categories[index] = category;
+                UpdateDashboardTracks();
             }
         }
 
@@ -176,6 +200,7 @@ namespace VibeMP.ViewModels
             }
             else
             {
+                LoadDashboardRows();
                 CurrentViewState = AppViewState.Dashboard;
             }
         }
@@ -188,11 +213,10 @@ namespace VibeMP.ViewModels
 
             foreach (var uiTrack in ZeroBpmTracks)
             {
-                var dbTrack = db.Tracks.Find(uiTrack.FilePath);
+                var dbTrack = db.Tracks.FirstOrDefault(t => t.FilePath == uiTrack.FilePath);
                 if (dbTrack != null)
                 {
                     dbTrack.Bpm = uiTrack.Bpm;
-
                     dbTrack.CategoryId = dbCategories
                         .OrderBy(c => Math.Abs(uiTrack.Bpm - c.MaxBpm))
                         .FirstOrDefault()
@@ -202,12 +226,129 @@ namespace VibeMP.ViewModels
 
             db.SaveChanges();
 
+            LoadDashboardRows();
             CurrentViewState = AppViewState.Dashboard;
             StatusText = "Library successfully verified.";
         }
 
         [RelayCommand]
-        private void AddFiles()
+        private void SelectHome()
+        {
+            SelectedCategory = null;
+            IsHomeSelected = true;
+        }
+
+        [RelayCommand]
+        private void SelectCategory(VibeCategory category)
+        {
+            if (category == null)
+                return;
+
+            SelectedCategory = category;
+            IsHomeSelected = false;
+            UpdateDashboardTracks();
+        }
+
+        [RelayCommand]
+        private void PlaySpecificTrack(Track track)
+        {
+            if (track == null || string.IsNullOrEmpty(track.FilePath))
+                return;
+
+            if (SelectedTrack != null && SelectedTrack.FilePath == track.FilePath)
+            {
+                TogglePlayback();
+                return;
+            }
+
+            SelectedTrack = track;
+
+            try
+            {
+                _mediaPlayer.Open(new Uri(SelectedTrack.FilePath));
+                _mediaPlayer.Play();
+                IsPlaying = true;
+                System.Diagnostics.Debug.WriteLine($"Playing: {SelectedTrack.Title}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Playback failed: {ex.Message}");
+                IsPlaying = false;
+            }
+        }
+
+        [RelayCommand]
+        private void TogglePlayback()
+        {
+            if (SelectedTrack == null || string.IsNullOrEmpty(SelectedTrack.FilePath))
+                return;
+
+            IsPlaying = !IsPlaying;
+
+            if (IsPlaying)
+            {
+                _mediaPlayer.Play();
+            }
+            else
+            {
+                _mediaPlayer.Pause();
+            }
+        }
+
+        [RelayCommand]
+        private void PlayNextTrack()
+        {
+            if (SelectedTrack == null)
+                return;
+
+            var currentCategory = Categories.FirstOrDefault(c =>
+                c.CategoryTracks.Contains(SelectedTrack)
+            );
+            if (currentCategory == null)
+                return;
+
+            var tracks = currentCategory.CategoryTracks;
+            int currentIndex = tracks.IndexOf(SelectedTrack);
+
+            if (currentIndex >= 0 && currentIndex < tracks.Count - 1)
+            {
+                PlaySpecificTrack(tracks[currentIndex + 1]);
+            }
+            else
+            {
+                IsPlaying = false;
+                _mediaPlayer.Stop();
+                _mediaPlayer.Position = TimeSpan.Zero;
+            }
+        }
+
+        [RelayCommand]
+        private void PlayPreviousTrack()
+        {
+            if (SelectedTrack == null)
+                return;
+
+            var currentCategory = Categories.FirstOrDefault(c =>
+                c.CategoryTracks.Contains(SelectedTrack)
+            );
+            if (currentCategory == null)
+                return;
+
+            var tracks = currentCategory.CategoryTracks;
+            int currentIndex = tracks.IndexOf(SelectedTrack);
+
+            if (currentIndex > 0)
+            {
+                PlaySpecificTrack(tracks[currentIndex - 1]);
+            }
+            else
+            {
+                _mediaPlayer.Position = TimeSpan.Zero;
+            }
+        }
+
+        [RelayCommand]
+        private async Task AddFilesAsync()
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
@@ -218,20 +359,7 @@ namespace VibeMP.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
-                foreach (var file in dialog.FileNames)
-                {
-                    if (!PendingImportPaths.Any(p => p.FullPath == file))
-                    {
-                        PendingImportPaths.Add(
-                            new PendingItem
-                            {
-                                FullPath = file,
-                                DisplayName = Path.GetFileName(file),
-                            }
-                        );
-                    }
-                }
-
+                await ImportPathsAsync(dialog.FileNames);
                 HasPendingImports = PendingImportPaths.Count > 0;
             }
         }
@@ -240,7 +368,9 @@ namespace VibeMP.ViewModels
         {
             try
             {
-                IsProcessing = true;
+                _activeImportCount++;
+                IsProcessing = _activeImportCount > 0;
+
                 ScanProgressValue = 0;
 
                 foreach (var p in paths)
@@ -281,6 +411,11 @@ namespace VibeMP.ViewModels
 
                 HasPendingImports = PendingImportPaths.Count > 0;
                 StatusText = "All songs successfully added and analyzed.";
+
+                if (CurrentViewState == AppViewState.Dashboard)
+                {
+                    LoadDashboardRows();
+                }
             }
             catch (Exception ex)
             {
@@ -288,17 +423,65 @@ namespace VibeMP.ViewModels
             }
             finally
             {
-                try
+                _activeImportCount--;
+                IsProcessing = _activeImportCount > 0;
+
+                Application.Current?.Dispatcher?.Invoke(() =>
                 {
-                    IsProcessing = false;
-                    Application.Current?.Dispatcher?.Invoke(() =>
-                    {
-                        CompleteOnboardingCommand?.NotifyCanExecuteChanged();
-                    });
+                    CompleteOnboardingCommand?.NotifyCanExecuteChanged();
+                });
+            }
+        }
+
+        public void LoadDashboardRows()
+        {
+            using var db = new LibraryContext();
+            var dbCategories = db.Categories.ToList();
+
+            Categories.Clear();
+            foreach (var cat in dbCategories)
+            {
+                if (cat.CategoryTracks != null)
+                {
+                    cat.CategoryTracks.Clear();
                 }
-                catch (Exception ex)
+                Categories.Add(cat);
+            }
+
+            if (Categories.Count == 0)
+                return;
+
+            var allTracks = db.Tracks.ToList();
+            foreach (var track in allTracks)
+            {
+                var closestCategory = Categories
+                    .OrderBy(c => Math.Abs(track.Bpm - c.MaxBpm))
+                    .FirstOrDefault();
+
+                closestCategory?.CategoryTracks.Add(track);
+            }
+
+            if (SelectedCategory == null)
+            {
+                IsHomeSelected = true;
+            }
+            else
+            {
+                SelectedCategory = Categories.FirstOrDefault(c => c.Id == SelectedCategory.Id);
+                IsHomeSelected = false;
+            }
+
+            UpdateDashboardTracks();
+        }
+
+        private void UpdateDashboardTracks()
+        {
+            DashboardTracks.Clear();
+            if (SelectedCategory != null && SelectedCategory.CategoryTracks != null)
+            {
+                foreach (var track in SelectedCategory.CategoryTracks)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[UI DISPATCHER CRASH]: {ex.Message}");
+                    DashboardTracks.Add(track);
                 }
             }
         }

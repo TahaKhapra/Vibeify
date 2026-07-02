@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace VibeMP.Models
 {
@@ -10,5 +12,8 @@ namespace VibeMP.Models
         public float MinBpm { get; set; }
         public float MaxBpm { get; set; }
         public bool IsPreset { get; set; }
+
+        [NotMapped]
+        public ObservableCollection<Track> CategoryTracks { get; } = new();
     }
 }

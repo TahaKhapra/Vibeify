@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using VibeMP.Models;
 using VibeMP.ViewModels;
 
 namespace VibeMP.Views
@@ -47,6 +48,29 @@ namespace VibeMP.Views
                     "Library Import Successful!",
                     "Tracks added and categorized."
                 );
+            }
+        }
+
+        private void ClearPaths_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is VibeMP.ViewModels.MainViewModel vm)
+            {
+                vm.PendingImportPaths.Clear();
+                vm.HasPendingImports = false;
+            }
+        }
+
+        private void TrackRow_MouseClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (sender is DataGridRow row && row.DataContext is Track selectedTrack)
+            {
+                if (DataContext is MainViewModel viewModel)
+                {
+                    if (viewModel.PlaySpecificTrackCommand.CanExecute(selectedTrack))
+                    {
+                        viewModel.PlaySpecificTrackCommand.Execute(selectedTrack);
+                    }
+                }
             }
         }
 
@@ -114,5 +138,7 @@ namespace VibeMP.Views
                     })
                 );
         }
+
+        private void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) { }
     }
 }

@@ -19,13 +19,21 @@ namespace VibeMP.Audio
         public float Volume
         {
             get => _audioFile?.Volume ?? 0;
-            set { if (_audioFile != null) _audioFile.Volume = value; }
+            set
+            {
+                if (_audioFile != null)
+                    _audioFile.Volume = value;
+            }
         }
 
         public TimeSpan CurrentTime
         {
             get => _audioFile?.CurrentTime ?? TimeSpan.Zero;
-            set { if (_audioFile != null) _audioFile.CurrentTime = value; }
+            set
+            {
+                if (_audioFile != null)
+                    _audioFile.CurrentTime = value;
+            }
         }
 
         public void Load(string filePath)
@@ -41,7 +49,6 @@ namespace VibeMP.Audio
                 if (_outputDevice != null)
                 {
                     _outputDevice.PlaybackStopped += OnPlaybackStopped;
-                
                 }
 
                 // to run in the background

@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <NoWarn>NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +27,7 @@
     <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
     <PackageReference Include="SoundTouch.Net.NAudioSupport" Version="2.3.2" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <PackageReference Include="SourceGear.sqlite3" Version="3.50.4.5" />
   </ItemGroup>
 
   <ItemGroup>

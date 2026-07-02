@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using VibeMP.Data;
-using VibeMP.Models;
 using VibeMP.Services.BpmAnalysis;
 
 namespace VibeMP.Services
@@ -8,6 +7,7 @@ namespace VibeMP.Services
     public class LibraryManager
     {
         private readonly BpmAnalyzer _analyzer = new();
+        private readonly MetadataService _metadataService = new();
         private readonly string[] _supportedExtensions = { ".mp3", ".flac", ".wav", ".m4a" };
 
         public LibraryManager()
@@ -25,11 +25,10 @@ namespace VibeMP.Services
             int total = pathsList.Count;
             int current = 0;
 
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 using var db = new LibraryContext();
 
-                // Load categories into memory once to check BPM limits quickly
                 var categories = db.Categories.ToList();
 
                 foreach (var path in pathsList)
@@ -47,25 +46,18 @@ namespace VibeMP.Services
                             continue;
                         }
 
-                        float calculatedBpm = _analyzer.Analyze(path);
+                        var newTrack = await _metadataService.GetTrackMetadataAsync(path);
 
+                        float calculatedBpm = _analyzer.Analyze(path);
                         int? assignedCategoryId = categories
                             .OrderBy(c => Math.Abs(calculatedBpm - c.MaxBpm))
                             .FirstOrDefault()
                             ?.Id;
 
-                        var newTrack = new Track
-                        {
-                            FilePath = path,
-                            Title = Path.GetFileNameWithoutExtension(path),
-                            Bpm = calculatedBpm,
-                            CategoryId = assignedCategoryId,
-                        };
+                        newTrack.Bpm = calculatedBpm;
+                        newTrack.CategoryId = assignedCategoryId;
 
                         db.Tracks.Add(newTrack);
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[STAGE] Staged: {newTrack.Title} (Category ID: {newTrack.CategoryId})"
-                        );
                     }
                     catch (Exception ex)
                     {
