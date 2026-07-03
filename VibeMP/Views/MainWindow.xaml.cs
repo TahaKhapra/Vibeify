@@ -167,18 +167,12 @@ namespace VibeMP.Views
 
         public bool IsDraggingProgress { get; private set; } = false;
 
-        private void ProgressBar_DragStarted(
-            object sender,
-            System.Windows.Controls.Primitives.DragStartedEventArgs e
-        )
+        private void ProgressBar_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             IsDraggingProgress = true;
         }
 
-        private void ProgressBar_DragCompleted(
-            object sender,
-            System.Windows.Controls.Primitives.DragCompletedEventArgs e
-        )
+        private void ProgressBar_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (sender is Slider slider && DataContext is MainViewModel viewModel)
             {

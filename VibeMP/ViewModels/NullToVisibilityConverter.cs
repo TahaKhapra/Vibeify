@@ -1,17 +1,14 @@
 ﻿using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 
 namespace VibeMP
 {
-    public class GreaterThanZeroConverter : IValueConverter
+    public class NullToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is double doubleValue)
-            {
-                return doubleValue > 0.001;
-            }
-            return false;
+            return value == null ? Visibility.Hidden : Visibility.Visible;
         }
 
         public object ConvertBack(

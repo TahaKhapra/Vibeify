@@ -1,8 +1,8 @@
-﻿using System.Collections.ObjectModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using VibeMP.Data;
 using VibeMP.Models;
 using VibeMP.Services;
@@ -58,16 +58,20 @@ namespace VibeMP.ViewModels
         private bool _isPlaying;
 
         [ObservableProperty]
-        private double _playbackProgressSeconds;
+        private double _playbackProgressSeconds = 0;
 
         [ObservableProperty]
-        private double _playbackDurationSeconds;
+        private double _playbackDurationSeconds = 1;
 
         [ObservableProperty]
-        private string _playbackPositionString = "0:00";
+        private string? _playbackPositionString = null;
 
         [ObservableProperty]
-        private string _playbackDurationString = "0:00";
+        private string? _playbackDurationString = null;
+
+        // Variables to neutralize the WPF FLAC 8-second jumping bug
+        private DateTime _lastSeekTime = DateTime.MinValue;
+        private double _lastReportedEnginePosition = 0;
         #endregion
 
         #region Collections & Selection Properties
@@ -128,23 +132,12 @@ namespace VibeMP.ViewModels
             if (SelectedTrack == null || !IsPlaying || Application.Current.MainWindow == null)
                 return;
 
-            // Safely check if the view window is dragging the slider progress thumb
-            if (
-                Application.Current.MainWindow is MainWindow mainWindow
-                && mainWindow.IsDraggingProgress
-            )
+            if (Application.Current.MainWindow is MainWindow mainWindow && mainWindow.IsDraggingProgress)
                 return;
 
             if (_mediaPlayer.NaturalDuration.HasTimeSpan)
             {
                 PlaybackDurationSeconds = _mediaPlayer.NaturalDuration.TimeSpan.TotalSeconds;
-                PlaybackProgressSeconds = _mediaPlayer.Position.TotalSeconds;
-
-                PlaybackPositionString = string.Format(
-                    "{0}:{1:D2}",
-                    (int)_mediaPlayer.Position.TotalMinutes,
-                    _mediaPlayer.Position.Seconds
-                );
                 var duration = _mediaPlayer.NaturalDuration.TimeSpan;
                 PlaybackDurationString = string.Format(
                     "{0}:{1:D2}",
@@ -152,6 +145,27 @@ namespace VibeMP.ViewModels
                     duration.Seconds
                 );
             }
+
+            double currentEnginePosition = _mediaPlayer.Position.TotalSeconds;
+            double delta = currentEnginePosition - _lastReportedEnginePosition;
+            _lastReportedEnginePosition = currentEnginePosition;
+
+            if ((DateTime.Now - _lastSeekTime).TotalMilliseconds < 800)
+                return;
+
+            if (delta > 0 && delta < 3.0)
+            {
+                PlaybackProgressSeconds += delta;
+            }
+
+            if (PlaybackProgressSeconds > PlaybackDurationSeconds)
+                PlaybackProgressSeconds = PlaybackDurationSeconds;
+
+            PlaybackPositionString = string.Format(
+                "{0}:{1:D2}",
+                (int)(PlaybackProgressSeconds / 60),
+                (int)(PlaybackProgressSeconds % 60)
+            );
         }
         #endregion
 
@@ -161,13 +175,15 @@ namespace VibeMP.ViewModels
             if (SelectedTrack == null)
                 return;
 
+            _lastSeekTime = DateTime.Now;
+
             _mediaPlayer.Position = TimeSpan.FromSeconds(seconds);
 
             PlaybackProgressSeconds = seconds;
             PlaybackPositionString = string.Format(
                 "{0}:{1:D2}",
-                (int)_mediaPlayer.Position.TotalMinutes,
-                _mediaPlayer.Position.Seconds
+                (int)(seconds / 60),
+                (int)(seconds % 60)
             );
         }
         #endregion
@@ -624,6 +640,10 @@ namespace VibeMP.ViewModels
                 _mediaPlayer.Open(new Uri(SelectedTrack.FilePath));
                 _mediaPlayer.Play();
                 IsPlaying = true;
+
+                PlaybackProgressSeconds = 0;
+                _lastReportedEnginePosition = 0;
+
                 System.Diagnostics.Debug.WriteLine($"Playing: {SelectedTrack.Title}");
             }
             catch (Exception ex)
@@ -675,6 +695,8 @@ namespace VibeMP.ViewModels
                 IsPlaying = false;
                 _mediaPlayer.Stop();
                 _mediaPlayer.Position = TimeSpan.Zero;
+                PlaybackProgressSeconds = 0;
+                _lastReportedEnginePosition = 0;
             }
         }
 
@@ -700,6 +722,8 @@ namespace VibeMP.ViewModels
             else
             {
                 _mediaPlayer.Position = TimeSpan.Zero;
+                PlaybackProgressSeconds = 0;
+                _lastReportedEnginePosition = 0;
             }
         }
 

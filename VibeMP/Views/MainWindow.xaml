@@ -21,7 +21,7 @@
   </Window.DataContext>
 
   <Window.Resources>
-    <local:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter" />
+    <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
     <Style x:Key="OnboardingVisibilityStyle" TargetType="FrameworkElement">
@@ -1431,34 +1431,33 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
+
               <TextBlock
                 Grid.Column="0"
-                Text="{Binding PlaybackPositionString, TargetNullValue='', FallbackValue=''}"
+                Text="{Binding PlaybackPositionString, TargetNullValue=''}"
                 Foreground="#A7A7A7"
                 FontSize="11"
                 Margin="0,0,8,0"
                 VerticalAlignment="Center"
               />
+
               <Slider
                 Grid.Column="1"
-                Value="{Binding PlaybackProgressSeconds}"
-                Maximum="{Binding PlaybackDurationSeconds}"
+                Value="{Binding PlaybackProgressSeconds, Mode=OneWay}"
+                Maximum="{Binding PlaybackDurationSeconds, Mode=OneWay}"
                 VerticalAlignment="Center"
                 Focusable="False"
-                Thumb.DragStarted="ProgressBar_DragStarted"
-                Thumb.DragCompleted="ProgressBar_DragCompleted"
+                    IsMoveToPointEnabled="True"
+                PreviewMouseLeftButtonDown="ProgressBar_PreviewMouseLeftButtonDown"
+                PreviewMouseLeftButtonUp="ProgressBar_PreviewMouseLeftButtonUp"
+                Visibility="{Binding SelectedTrack, Converter={StaticResource NullToVisibilityConverter}}"
               >
                 <Slider.Style>
                   <Style TargetType="Slider">
                     <Setter Property="Template">
                       <Setter.Value>
                         <ControlTemplate TargetType="Slider">
-                          <Grid
-                            x:Name="SliderContainer"
-                            VerticalAlignment="Center"
-                            Background="Transparent"
-                            Height="12"
-                          >
+                          <Grid VerticalAlignment="Center" Background="Transparent" Height="16">
                             <Border
                               Background="#282828"
                               Height="4"
@@ -1469,38 +1468,35 @@
 
                             <Track x:Name="PART_Track">
                               <Track.DecreaseRepeatButton>
-                                <RepeatButton Command="Slider.DecreaseLarge">
+                                <RepeatButton Command="{x:Null}" IsHitTestVisible="False">
                                   <RepeatButton.Template>
                                     <ControlTemplate TargetType="RepeatButton">
                                       <Border
+                                        Background="White"
                                         Height="4"
-                                        CornerRadius="2,0,0,2"
+                                        CornerRadius="2"
                                         SnapsToDevicePixels="True"
-                                      >
-                                        <Border.Style>
-                                          <Style TargetType="Border">
-                                            <Setter Property="Background" Value="#282828" />
-                                            <Style.Triggers>
-                                              <DataTrigger
-                                                Binding="{Binding PlaybackProgressSeconds, RelativeSource={RelativeSource AncestorType=Slider}, Converter={StaticResource GreaterThanZeroConverter}}"
-                                                Value="True"
-                                              >
-                                                <Setter Property="Background" Value="White" />
-                                              </DataTrigger>
-                                            </Style.Triggers>
-                                          </Style>
-                                        </Border.Style>
-                                      </Border>
+                                      />
                                     </ControlTemplate>
                                   </RepeatButton.Template>
                                 </RepeatButton>
                               </Track.DecreaseRepeatButton>
 
+                              <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="{x:Null}" IsHitTestVisible="False">
+                                  <RepeatButton.Template>
+                                    <ControlTemplate TargetType="RepeatButton">
+                                      <Border Background="Transparent" />
+                                    </ControlTemplate>
+                                  </RepeatButton.Template>
+                                </RepeatButton>
+                              </Track.IncreaseRepeatButton>
+
                               <Track.Thumb>
                                 <Thumb Cursor="Hand">
                                   <Thumb.Template>
                                     <ControlTemplate TargetType="Thumb">
-                                      <Grid Background="Transparent">
+                                      <Grid Background="Transparent" Width="16" Height="16">
                                         <Border
                                           x:Name="ThumbVisual"
                                           Width="12"
@@ -1508,7 +1504,7 @@
                                           Background="White"
                                           CornerRadius="6"
                                           RenderOptions.EdgeMode="Aliased"
-                                          Visibility="Collapsed"
+                                          Opacity="0"
                                         />
                                       </Grid>
                                       <ControlTemplate.Triggers>
@@ -1518,8 +1514,8 @@
                                         >
                                           <Setter
                                             TargetName="ThumbVisual"
-                                            Property="Visibility"
-                                            Value="Visible"
+                                            Property="Opacity"
+                                            Value="1"
                                           />
                                         </DataTrigger>
                                       </ControlTemplate.Triggers>
@@ -1535,9 +1531,10 @@
                   </Style>
                 </Slider.Style>
               </Slider>
+
               <TextBlock
                 Grid.Column="2"
-                Text="{Binding PlaybackDurationString, TargetNullValue='', FallbackValue=''}"
+                Text="{Binding PlaybackDurationString, TargetNullValue=''}"
                 Foreground="#A7A7A7"
                 FontSize="11"
                 Margin="8,0,0,0"
