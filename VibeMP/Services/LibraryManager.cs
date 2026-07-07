@@ -1,5 +1,7 @@
 ﻿using System.IO;
+using VibeMP.Core.Interfaces;
 using VibeMP.Data;
+using VibeMP.Models;
 
 namespace VibeMP.Services
 {
@@ -8,12 +10,28 @@ namespace VibeMP.Services
         private readonly BpmAnalyzer _analyzer = new();
         private readonly MetadataService _metadataService = new();
         private readonly string[] _supportedExtensions = { ".mp3", ".flac", ".wav", ".m4a" };
+        private readonly ILibraryRepository _repository;
 
-        public LibraryManager()
+        public LibraryManager(ILibraryRepository repository)
         {
+            _repository = repository;
             using var db = new LibraryContext();
             db.Database.EnsureCreated();
         }
+
+        public bool HasTracks() => _repository.HasTracks();
+
+        public List<VibeCategory> GetAllCategories() => _repository.GetAllCategories();
+
+        public List<Track> GetAllTracks() => _repository.GetAllTracks();
+
+        public void SaveCategories(IEnumerable<VibeCategory> categories) =>
+            _repository.SaveCategories(categories);
+
+        public void DeleteCategory(int id) => _repository.DeleteCategory(id);
+
+        public void UpdateTrackCategoryIds(IEnumerable<Track> tracks) =>
+            _repository.UpdateTrackCategoryIds(tracks);
 
         public async Task ImportFilesAsync(
             IEnumerable<string> filePaths,

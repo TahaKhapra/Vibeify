@@ -14,7 +14,7 @@
         <Style TargetType="Grid">
           <Setter Property="Visibility" Value="Collapsed" />
           <Style.Triggers>
-            <DataTrigger Binding="{Binding PendingImportPaths.Count}" Value="0">
+            <DataTrigger Binding="{Binding Importer.PendingImportPaths.Count}" Value="0">
               <Setter Property="Visibility" Value="Visible" />
             </DataTrigger>
           </Style.Triggers>
@@ -86,7 +86,7 @@
         </StackPanel>
 
         <TextBlock
-          Text="{Binding StatusText}"
+          Text="{Binding Importer.StatusText}"
           Foreground="#666666"
           FontWeight="Bold"
           FontSize="11"
@@ -95,14 +95,15 @@
           TextTrimming="CharacterEllipsis"
           HorizontalAlignment="Center"
         />
+
         <ProgressBar
-          Value="{Binding ScanProgressValue}"
-          Maximum="{Binding ScanProgressMax}"
+          Value="{Binding Importer.ScanProgressValue}"
+          Maximum="{Binding Importer.ScanProgressMax}"
           Width="220"
           Height="4"
           Background="#111111"
           Foreground="#888888"
-          Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}"
+          Visibility="{Binding Importer.IsProcessing, Converter={StaticResource BoolToVis}}"
         />
       </StackPanel>
     </Grid>
@@ -112,7 +113,7 @@
         <Style TargetType="Grid">
           <Setter Property="Visibility" Value="Visible" />
           <Style.Triggers>
-            <DataTrigger Binding="{Binding PendingImportPaths.Count}" Value="0">
+            <DataTrigger Binding="{Binding Importer.PendingImportPaths.Count}" Value="0">
               <Setter Property="Visibility" Value="Collapsed" />
             </DataTrigger>
           </Style.Triggers>
@@ -211,7 +212,7 @@
         BorderThickness="1"
       >
         <ListBox
-          ItemsSource="{Binding PendingImportPaths}"
+          ItemsSource="{Binding Importer.PendingImportPaths}"
           Background="Transparent"
           BorderThickness="0"
           Padding="5"

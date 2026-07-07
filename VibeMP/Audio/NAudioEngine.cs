@@ -38,7 +38,6 @@ namespace VibeMP.Audio
 
         public void Load(string filePath)
         {
-
             if (_outputDevice != null)
             {
                 _outputDevice.PlaybackStopped -= OnPlaybackStopped;
