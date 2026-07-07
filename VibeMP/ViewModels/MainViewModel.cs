@@ -714,11 +714,6 @@ namespace VibeMP.ViewModels
             var tracks = currentCategory.CategoryTracks;
             int currentIndex = tracks.IndexOf(SelectedTrack);
 
-            if (IsRepeatEnabled)
-            {
-                PlaySpecificTrack(SelectedTrack);
-                return;
-            }
 
             if (IsShuffleEnabled && tracks.Count > 1)
             {
@@ -739,11 +734,18 @@ namespace VibeMP.ViewModels
             }
             else
             {
-                IsPlaying = false;
-                _mediaPlayer.Stop();
-                _mediaPlayer.Position = TimeSpan.Zero;
-                PlaybackProgressSeconds = 0;
-                _lastReportedEnginePosition = 0;
+                if (IsRepeatEnabled && tracks.Count > 0)
+                {
+                    PlaySpecificTrack(tracks[0]);
+                }
+                else
+                {
+                    IsPlaying = false;
+                    _mediaPlayer.Stop();
+                    _mediaPlayer.Position = TimeSpan.Zero;
+                    PlaybackProgressSeconds = 0;
+                    _lastReportedEnginePosition = 0;
+                }
             }
         }
 
