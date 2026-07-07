@@ -4,7 +4,6 @@ namespace VibeMP.Core.Interfaces
 {
     public interface IAudioEngine : IDisposable
     {
-        // Control Methods
         void Load(string filePath);
         void Play();
         void Pause();

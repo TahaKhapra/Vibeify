@@ -1,16 +1,21 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace VibeMP.Models
 {
-    public class VibeCategory
+    public partial class VibeCategory : ObservableObject
     {
         [Key]
         public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public float MinBpm { get; set; }
-        public float MaxBpm { get; set; }
+
+        [ObservableProperty]
+        private string _name = string.Empty;
+
+        [ObservableProperty]
+        private float _targetBpm;
+
         public bool IsPreset { get; set; }
 
         [NotMapped]

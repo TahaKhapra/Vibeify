@@ -50,7 +50,7 @@ namespace VibeMP.Services
 
                         float calculatedBpm = _analyzer.Analyze(path);
                         int? assignedCategoryId = categories
-                            .OrderBy(c => Math.Abs(calculatedBpm - c.MaxBpm))
+                            .OrderBy(c => Math.Abs(calculatedBpm - c.TargetBpm))
                             .FirstOrDefault()
                             ?.Id;
 

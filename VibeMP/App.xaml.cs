@@ -41,15 +41,13 @@ namespace VibeMP
                     new VibeCategory
                     {
                         Name = "Studying",
-                        MinBpm = 70f,
-                        MaxBpm = 90f,
+                        TargetBpm = 70f,
                         IsPreset = true,
                     },
                     new VibeCategory
                     {
                         Name = "Gaming",
-                        MinBpm = 110f,
-                        MaxBpm = 130f,
+                        TargetBpm = 130f,
                         IsPreset = true,
                     }
                 );

@@ -14,6 +14,22 @@ namespace VibeMP.Views
             InitializeComponent();
         }
 
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void Maximize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState =
+                WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        }
+
+        private void Close_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
         private async void Window_Drop(object sender, DragEventArgs e)
         {
             if (
@@ -167,12 +183,18 @@ namespace VibeMP.Views
 
         public bool IsDraggingProgress { get; private set; } = false;
 
-        private void ProgressBar_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void ProgressBar_PreviewMouseLeftButtonDown(
+            object sender,
+            System.Windows.Input.MouseButtonEventArgs e
+        )
         {
             IsDraggingProgress = true;
         }
 
-        private void ProgressBar_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void ProgressBar_PreviewMouseLeftButtonUp(
+            object sender,
+            System.Windows.Input.MouseButtonEventArgs e
+        )
         {
             if (sender is Slider slider && DataContext is MainViewModel viewModel)
             {

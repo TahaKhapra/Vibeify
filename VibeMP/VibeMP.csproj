@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Resources\Assets\vibeify.ico" />
     <None Remove="Resources\Fonts\LexendDeca-Bold.ttf" />
     <None Remove="Resources\Fonts\LexendDeca-Medium.ttf" />
     <None Remove="Resources\Fonts\LexendDeca-Regular.ttf" />
@@ -31,6 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Resources\Assets\vibeify.ico" />
     <Resource Include="Resources\Fonts\LexendDeca-Bold.ttf" />
     <Resource Include="Resources\Fonts\LexendDeca-Medium.ttf" />
     <Resource Include="Resources\Fonts\LexendDeca-Regular.ttf" />

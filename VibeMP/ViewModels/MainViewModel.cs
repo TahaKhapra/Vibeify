@@ -55,6 +55,15 @@ namespace VibeMP.ViewModels
         private System.Windows.Media.MediaPlayer _mediaPlayer = new();
 
         [ObservableProperty]
+        private double _playbackVolume = 0.75;
+
+        [ObservableProperty]
+        private bool _isShuffleEnabled;
+
+        [ObservableProperty]
+        private bool _isRepeatEnabled;
+
+        [ObservableProperty]
         private bool _isPlaying;
 
         [ObservableProperty]
@@ -69,7 +78,6 @@ namespace VibeMP.ViewModels
         [ObservableProperty]
         private string? _playbackDurationString = null;
 
-        // Variables to neutralize the WPF FLAC 8-second jumping bug
         private DateTime _lastSeekTime = DateTime.MinValue;
         private double _lastReportedEnginePosition = 0;
         #endregion
@@ -90,6 +98,7 @@ namespace VibeMP.ViewModels
         #region Constructor & Initialization
         public MainViewModel()
         {
+            _mediaPlayer.Volume = 0.75;
             _mediaPlayer.MediaEnded += (s, e) => PlayNextTrack();
             LoadCategoriesFromDb();
 
@@ -132,7 +141,10 @@ namespace VibeMP.ViewModels
             if (SelectedTrack == null || !IsPlaying || Application.Current.MainWindow == null)
                 return;
 
-            if (Application.Current.MainWindow is MainWindow mainWindow && mainWindow.IsDraggingProgress)
+            if (
+                Application.Current.MainWindow is MainWindow mainWindow
+                && mainWindow.IsDraggingProgress
+            )
                 return;
 
             if (_mediaPlayer.NaturalDuration.HasTimeSpan)
@@ -176,7 +188,6 @@ namespace VibeMP.ViewModels
                 return;
 
             _lastSeekTime = DateTime.Now;
-
             _mediaPlayer.Position = TimeSpan.FromSeconds(seconds);
 
             PlaybackProgressSeconds = seconds;
@@ -185,6 +196,14 @@ namespace VibeMP.ViewModels
                 (int)(seconds / 60),
                 (int)(seconds % 60)
             );
+        }
+
+        partial void OnPlaybackVolumeChanged(double value)
+        {
+            if (_mediaPlayer != null)
+            {
+                _mediaPlayer.Volume = value;
+            }
         }
         #endregion
 
@@ -211,7 +230,7 @@ namespace VibeMP.ViewModels
             foreach (var track in allTracks)
             {
                 var closestCategory = Categories
-                    .OrderBy(c => Math.Abs(track.Bpm - c.MaxBpm))
+                    .OrderBy(c => Math.Abs(track.Bpm - c.TargetBpm))
                     .FirstOrDefault();
 
                 closestCategory?.CategoryTracks.Add(track);
@@ -246,15 +265,13 @@ namespace VibeMP.ViewModels
                 var gaming = new VibeCategory
                 {
                     Name = "Gaming",
-                    MaxBpm = 120,
-                    MinBpm = 0,
+                    TargetBpm = 120,
                     IsPreset = true,
                 };
                 var studying = new VibeCategory
                 {
                     Name = "Studying",
-                    MaxBpm = 80,
-                    MinBpm = 0,
+                    TargetBpm = 80,
                     IsPreset = true,
                 };
                 Categories.Add(gaming);
@@ -274,7 +291,7 @@ namespace VibeMP.ViewModels
                     if (dbCategory != null)
                     {
                         dbCategory.Name = uiCategory.Name;
-                        dbCategory.MaxBpm = uiCategory.MaxBpm;
+                        dbCategory.TargetBpm = uiCategory.TargetBpm;
                     }
                 }
                 else
@@ -422,7 +439,7 @@ namespace VibeMP.ViewModels
                     if (
                         dbMatch == null
                         || dbMatch.Name != uiCategory.Name
-                        || dbMatch.MaxBpm != uiCategory.MaxBpm
+                        || dbMatch.TargetBpm != uiCategory.TargetBpm
                     )
                     {
                         structuralChangesMade = true;
@@ -458,7 +475,7 @@ namespace VibeMP.ViewModels
                         var dbMatch = originalDbCategories.FirstOrDefault(c =>
                             c.Id == uiCategory.Id
                         );
-                        if (dbMatch != null && dbMatch.MaxBpm != uiCategory.MaxBpm)
+                        if (dbMatch != null && dbMatch.TargetBpm != uiCategory.TargetBpm)
                         {
                             requiresReassignment = true;
                         }
@@ -475,7 +492,7 @@ namespace VibeMP.ViewModels
                     foreach (var track in allTracks)
                     {
                         var closestCategory = updatedCategories
-                            .OrderBy(c => Math.Abs(track.Bpm - c.MaxBpm))
+                            .OrderBy(c => Math.Abs(track.Bpm - c.TargetBpm))
                             .FirstOrDefault();
 
                         track.CategoryId = closestCategory?.Id;
@@ -566,7 +583,7 @@ namespace VibeMP.ViewModels
                 {
                     dbTrack.Bpm = uiTrack.Bpm;
                     dbTrack.CategoryId = dbCategories
-                        .OrderBy(c => Math.Abs(uiTrack.Bpm - c.MaxBpm))
+                        .OrderBy(c => Math.Abs(uiTrack.Bpm - c.TargetBpm))
                         .FirstOrDefault()
                         ?.Id;
                 }
@@ -588,8 +605,7 @@ namespace VibeMP.ViewModels
                 new VibeCategory
                 {
                     Name = "New Category",
-                    MaxBpm = 100,
-                    MinBpm = 0,
+                    TargetBpm = 100,
                     IsPreset = false,
                 }
             );
@@ -600,7 +616,7 @@ namespace VibeMP.ViewModels
         {
             if (category != null)
             {
-                category.MaxBpm++;
+                category.TargetBpm++;
                 int index = Categories.IndexOf(category);
                 Categories[index] = category;
                 UpdateDashboardTracks();
@@ -610,9 +626,9 @@ namespace VibeMP.ViewModels
         [RelayCommand]
         private void DecrementBpm(VibeCategory category)
         {
-            if (category != null && category.MaxBpm > 1)
+            if (category != null && category.TargetBpm > 1)
             {
-                category.MaxBpm--;
+                category.TargetBpm--;
                 int index = Categories.IndexOf(category);
                 Categories[index] = category;
                 UpdateDashboardTracks();
@@ -672,6 +688,18 @@ namespace VibeMP.ViewModels
         }
 
         [RelayCommand]
+        private void ToggleShuffle()
+        {
+            IsShuffleEnabled = !IsShuffleEnabled;
+        }
+
+        [RelayCommand]
+        private void ToggleRepeat()
+        {
+            IsRepeatEnabled = !IsRepeatEnabled;
+        }
+
+        [RelayCommand]
         private void PlayNextTrack()
         {
             if (SelectedTrack == null)
@@ -685,6 +713,25 @@ namespace VibeMP.ViewModels
 
             var tracks = currentCategory.CategoryTracks;
             int currentIndex = tracks.IndexOf(SelectedTrack);
+
+            if (IsRepeatEnabled)
+            {
+                PlaySpecificTrack(SelectedTrack);
+                return;
+            }
+
+            if (IsShuffleEnabled && tracks.Count > 1)
+            {
+                int nextIndex;
+                var random = new Random();
+                do
+                {
+                    nextIndex = random.Next(tracks.Count);
+                } while (nextIndex == currentIndex);
+
+                PlaySpecificTrack(tracks[nextIndex]);
+                return;
+            }
 
             if (currentIndex >= 0 && currentIndex < tracks.Count - 1)
             {
