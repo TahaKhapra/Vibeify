@@ -1,6 +1,6 @@
 ﻿using NAudio.Wave;
 using VibeMP.Core.Interfaces;
-using VibeMP.Services.BpmAnalysis;
+using VibeMP.Services;
 
 namespace VibeMP.Audio
 {
@@ -38,7 +38,14 @@ namespace VibeMP.Audio
 
         public void Load(string filePath)
         {
-            Stop();
+
+            if (_outputDevice != null)
+            {
+                _outputDevice.PlaybackStopped -= OnPlaybackStopped;
+                _outputDevice.Stop();
+            }
+
+            Dispose();
 
             try
             {
@@ -51,7 +58,6 @@ namespace VibeMP.Audio
                     _outputDevice.PlaybackStopped += OnPlaybackStopped;
                 }
 
-                // to run in the background
                 _ = Task.Run(() => RunBpmAnalysis(filePath));
             }
             catch (Exception ex)
@@ -77,8 +83,12 @@ namespace VibeMP.Audio
 
         public void Stop()
         {
-            _outputDevice?.Stop();
             _state = Models.PlaybackState.Stopped;
+            if (_outputDevice != null)
+            {
+                _outputDevice.PlaybackStopped -= OnPlaybackStopped;
+                _outputDevice.Stop();
+            }
             Dispose();
         }
 
@@ -92,7 +102,11 @@ namespace VibeMP.Audio
 
         private void OnPlaybackStopped(object? sender, StoppedEventArgs e)
         {
-            PlaybackFinished?.Invoke(this, EventArgs.Empty);
+            if (_state == Models.PlaybackState.Playing)
+            {
+                _state = Models.PlaybackState.Stopped;
+                PlaybackFinished?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         public void Dispose()

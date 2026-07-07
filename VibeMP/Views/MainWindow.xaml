@@ -5,6 +5,7 @@
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:local="clr-namespace:VibeMP"
+  xmlns:views="clr-namespace:VibeMP.Views"
   xmlns:vms="clr-namespace:VibeMP.ViewModels"
   xmlns:models="clr-namespace:VibeMP.Models"
   mc:Ignorable="d"
@@ -69,42 +70,6 @@
           <Setter Property="Visibility" Value="Visible" />
         </DataTrigger>
       </Style.Triggers>
-    </Style>
-
-    <Style x:Key="CircleBpmButton" TargetType="Button">
-      <Setter Property="Background" Value="#2D2D2D" />
-      <Setter Property="Foreground" Value="#AAAAAA" />
-      <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="Width" Value="24" />
-      <Setter Property="Height" Value="24" />
-      <Setter Property="Cursor" Value="Hand" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Button">
-            <Border Background="{TemplateBinding Background}" CornerRadius="12">
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Border>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-
-    <Style x:Key="InlineTextBox" TargetType="TextBox">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CaretBrush" Value="White" />
-      <Setter Property="SelectionBrush" Value="#555555" />
-      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-      <Setter Property="Validation.ErrorTemplate" Value="{x:Null}" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="TextBox">
-            <Border Background="{TemplateBinding Background}">
-              <ScrollViewer x:Name="PART_ContentHost" Focusable="false" />
-            </Border>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
     </Style>
 
     <Style TargetType="ScrollBar">
@@ -202,6 +167,28 @@
         </Trigger>
       </Style.Triggers>
     </Style>
+
+    <DataTemplate DataType="{x:Type models:NotificationToast}">
+      <Border
+        Background="#2D2D2D"
+        BorderBrush="#FF4B4B"
+        BorderThickness="1,0,0,0"
+        CornerRadius="4"
+        Width="280"
+        Height="65"
+        Padding="12,8"
+      >
+        <StackPanel>
+          <TextBlock Text="{Binding Title}" Foreground="White" FontWeight="Bold" FontSize="13" />
+          <TextBlock
+            Text="{Binding Message}"
+            Foreground="DarkGray"
+            FontSize="11"
+            Margin="0,2,0,0"
+          />
+        </StackPanel>
+      </Border>
+    </DataTemplate>
   </Window.Resources>
 
   <Grid>
@@ -391,299 +378,9 @@
             <ColumnDefinition Width="340" />
           </Grid.ColumnDefinitions>
 
-          <Grid Grid.Row="0" Grid.Column="0">
-            <Button
-              Command="{Binding AddFilesCommand}"
-              Background="Transparent"
-              BorderThickness="0"
-              Padding="0"
-              Cursor="Hand"
-              HorizontalContentAlignment="Stretch"
-              VerticalContentAlignment="Stretch"
-            >
-              <Button.Template>
-                <ControlTemplate TargetType="Button">
-                  <Grid Background="Transparent">
-                    <Grid.Style>
-                      <Style TargetType="Grid">
-                        <Setter Property="Visibility" Value="Collapsed" />
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding PendingImportPaths.Count}" Value="0">
-                            <Setter Property="Visibility" Value="Visible" />
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </Grid.Style>
+          <views:ImportDropZone Grid.Row="0" Grid.Column="0" />
 
-                    <Rectangle
-                      Stroke="#333333"
-                      StrokeThickness="2"
-                      StrokeDashArray="4 4"
-                      RadiusX="12"
-                      RadiusY="12"
-                      Fill="#1C1C1C"
-                    />
-
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                      <Path
-                        Data="M4 4H10L12 6H20V18H4V4Z"
-                        Stroke="#555555"
-                        StrokeThickness="2"
-                        Fill="Transparent"
-                        Width="42"
-                        Height="36"
-                        Stretch="Fill"
-                        Margin="0,0,0,16"
-                        HorizontalAlignment="Center"
-                      />
-                      <TextBlock
-                        Text="Add more tracks"
-                        TextAlignment="Center"
-                        Foreground="#777777"
-                        FontSize="15"
-                        FontWeight="Medium"
-                        LineHeight="22"
-                      />
-                    </StackPanel>
-                  </Grid>
-                </ControlTemplate>
-              </Button.Template>
-            </Button>
-
-            <Grid AllowDrop="True" Drop="Window_Drop">
-              <Grid.Style>
-                <Style TargetType="Grid">
-                  <Setter Property="Visibility" Value="Visible" />
-                  <Style.Triggers>
-                    <DataTrigger Binding="{Binding PendingImportPaths.Count}" Value="0">
-                      <Setter Property="Visibility" Value="Collapsed" />
-                    </DataTrigger>
-                  </Style.Triggers>
-                </Style>
-              </Grid.Style>
-
-              <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-              </Grid.RowDefinitions>
-
-              <Button
-                Grid.Row="0"
-                Command="{Binding AddFilesCommand}"
-                HorizontalContentAlignment="Stretch"
-                Cursor="Hand"
-                Margin="0,0,0,10"
-              >
-                <Button.Template>
-                  <ControlTemplate TargetType="Button">
-                    <Border
-                      Background="#1C1C1C"
-                      BorderBrush="#333333"
-                      BorderThickness="1"
-                      CornerRadius="6"
-                      Padding="10,8"
-                    >
-                      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock
-                          Text="+"
-                          Foreground="#FFFFFF"
-                          FontWeight="Bold"
-                          FontSize="14"
-                          Margin="0,0,8,0"
-                          VerticalAlignment="Center"
-                        />
-                        <TextBlock
-                          Text="Drop more folders or click here"
-                          Foreground="#999999"
-                          FontSize="12"
-                          VerticalAlignment="Center"
-                        />
-                      </StackPanel>
-                    </Border>
-                  </ControlTemplate>
-                </Button.Template>
-              </Button>
-
-              <Border
-                Grid.Row="1"
-                Background="#141414"
-                CornerRadius="6"
-                BorderBrush="#222222"
-                BorderThickness="1"
-              >
-                <ListBox
-                  ItemsSource="{Binding PendingImportPaths}"
-                  Background="Transparent"
-                  BorderThickness="0"
-                  Padding="5"
-                >
-                  <ListBox.Resources>
-                    <SolidColorBrush
-                      x:Key="{x:Static SystemColors.HighlightBrushKey}"
-                      Color="#252525"
-                    />
-                    <SolidColorBrush
-                      x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"
-                      Color="#1A1A1A"
-                    />
-                  </ListBox.Resources>
-                  <ListBox.ItemTemplate>
-                    <DataTemplate>
-                      <Grid Margin="4,3">
-                        <Grid.ColumnDefinitions>
-                          <ColumnDefinition Width="Auto" />
-                          <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Path
-                          Grid.Column="0"
-                          Data="M21,3V15.5A3.5,3.5 0 0,1 17.5,19A3.5,3.5 0 0,1 14,15.5A3.5,3.5 0 0,1 17.5,12C18.04,12 18.55,12.12 19,12.34V6.47L9,8.6V17.5A3.5,3.5 0 0,1 5.5,21A3.5,3.5 0 0,1 2,17.5A3.5,3.5 0 0,1 5.5,14C6.04,14 6.55,14.12 7,14.34V6L21,3Z"
-                          Fill="#FFFFFF"
-                          Width="12"
-                          Height="12"
-                          Margin="0,0,8,0"
-                          Stretch="Fill"
-                          VerticalAlignment="Center"
-                        />
-                        <TextBlock
-                          Grid.Column="1"
-                          Text="{Binding DisplayName}"
-                          Foreground="#CCCCCC"
-                          FontSize="11"
-                          TextTrimming="CharacterEllipsis"
-                          ToolTip="{Binding FullPath}"
-                        />
-                      </Grid>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
-              </Border>
-            </Grid>
-          </Grid>
-
-          <Grid Grid.Row="0" Grid.Column="2">
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-            <Grid Grid.Row="0" Margin="0,0,0,16">
-              <TextBlock
-                Text="Categories"
-                Foreground="#888888"
-                FontSize="15"
-                FontWeight="Bold"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                Margin="4,0,0,0"
-              />
-              <TextBlock
-                Text="Target BPM"
-                Foreground="#888888"
-                FontSize="15"
-                FontWeight="Bold"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Center"
-                Margin="0,0,30,0"
-              />
-            </Grid>
-
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <StackPanel>
-                <ItemsControl ItemsSource="{Binding Categories}" Margin="0,0,0,10">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Grid Margin="0,0,0,10">
-                        <Border
-                          Background="#222222"
-                          CornerRadius="4"
-                          Padding="12,8"
-                          HorizontalAlignment="Left"
-                          Width="140"
-                        >
-                          <TextBox
-                            Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                            Style="{StaticResource InlineTextBox}"
-                            Foreground="White"
-                            FontSize="14"
-                          />
-                        </Border>
-
-                        <StackPanel
-                          Orientation="Horizontal"
-                          HorizontalAlignment="Right"
-                          VerticalAlignment="Center"
-                        >
-                          <Button
-                            Content="+"
-                            Style="{StaticResource CircleBpmButton}"
-                            Command="{Binding DataContext.IncrementBpmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                            CommandParameter="{Binding}"
-                          />
-                          <TextBlock
-                            Text="{Binding TargetBpm}"
-                            Foreground="White"
-                            FontSize="14"
-                            Width="50"
-                            TextAlignment="Center"
-                            VerticalAlignment="Center"
-                          />
-                          <Button
-                            Content="-"
-                            Style="{StaticResource CircleBpmButton}"
-                            Command="{Binding DataContext.DecrementBpmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                            CommandParameter="{Binding}"
-                          />
-                        </StackPanel>
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <Button
-                  Command="{Binding AddCategoryCommand}"
-                  Cursor="Hand"
-                  Height="42"
-                  Margin="0,4,0,10"
-                >
-                  <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                      <Grid>
-                        <Rectangle
-                          Stroke="#333333"
-                          StrokeThickness="1.5"
-                          StrokeDashArray="4 4"
-                          RadiusX="6"
-                          RadiusY="6"
-                          Fill="#1C1C1C"
-                        />
-                        <StackPanel
-                          Orientation="Horizontal"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"
-                        >
-                          <TextBlock
-                            Text="+"
-                            Foreground="#777777"
-                            FontWeight="Bold"
-                            FontSize="16"
-                            Margin="0,0,8,1"
-                            VerticalAlignment="Center"
-                          />
-                          <TextBlock
-                            Text="Add custom category"
-                            Foreground="#777777"
-                            FontSize="13"
-                            FontWeight="Medium"
-                            VerticalAlignment="Center"
-                          />
-                        </StackPanel>
-                      </Grid>
-                    </ControlTemplate>
-                  </Button.Template>
-                </Button>
-              </StackPanel>
-            </ScrollViewer>
-          </Grid>
+          <views:CategoryEditor Grid.Row="0" Grid.Column="2" />
 
           <Button
             Grid.Row="1"
@@ -2108,301 +1805,9 @@
             <ColumnDefinition Width="340" />
           </Grid.ColumnDefinitions>
 
-          <Grid Grid.Row="0" Grid.Column="0">
-            <Grid Cursor="Hand" MouseLeftButtonDown="SelectFolder_Click">
-              <Grid.Style>
-                <Style TargetType="Grid">
-                  <Setter Property="Visibility" Value="Collapsed" />
-                  <Style.Triggers>
-                    <DataTrigger Binding="{Binding PendingImportPaths.Count}" Value="0">
-                      <Setter Property="Visibility" Value="Visible" />
-                    </DataTrigger>
-                  </Style.Triggers>
-                </Style>
-              </Grid.Style>
+          <views:ImportDropZone Grid.Row="0" Grid.Column="0" />
 
-              <Rectangle
-                Stroke="#333333"
-                StrokeThickness="2"
-                StrokeDashArray="4 4"
-                RadiusX="12"
-                RadiusY="12"
-                Fill="#1C1C1C"
-              />
-              <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Path
-                  Data="M4 4H10L12 6H20V18H4V4Z"
-                  Stroke="#555555"
-                  StrokeThickness="2"
-                  Fill="Transparent"
-                  Width="42"
-                  Height="36"
-                  Stretch="Fill"
-                  Margin="0,0,0,16"
-                  HorizontalAlignment="Center"
-                />
-                <TextBlock
-                  Text="Connect your music library&#x0a;to get started"
-                  TextAlignment="Center"
-                  Foreground="#777777"
-                  FontSize="15"
-                  FontWeight="Medium"
-                  LineHeight="22"
-                />
-                <TextBlock
-                  Text="{Binding StatusText}"
-                  Foreground="#666666"
-                  FontWeight="Bold"
-                  FontSize="11"
-                  Margin="0,12,0,4"
-                  MaxWidth="260"
-                  TextTrimming="CharacterEllipsis"
-                  HorizontalAlignment="Center"
-                />
-                <ProgressBar
-                  Value="{Binding ScanProgressValue}"
-                  Maximum="{Binding ScanProgressMax}"
-                  Width="220"
-                  Height="4"
-                  Background="#111111"
-                  Foreground="#888888"
-                  Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}"
-                />
-              </StackPanel>
-            </Grid>
-
-            <Grid AllowDrop="True" Drop="Window_Drop">
-              <Grid.Style>
-                <Style TargetType="Grid">
-                  <Setter Property="Visibility" Value="Visible" />
-                  <Style.Triggers>
-                    <DataTrigger Binding="{Binding PendingImportPaths.Count}" Value="0">
-                      <Setter Property="Visibility" Value="Collapsed" />
-                    </DataTrigger>
-                  </Style.Triggers>
-                </Style>
-              </Grid.Style>
-
-              <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-              </Grid.RowDefinitions>
-              <Button
-                Grid.Row="0"
-                Command="{Binding AddFilesCommand}"
-                HorizontalContentAlignment="Stretch"
-                Cursor="Hand"
-                Margin="0,0,0,10"
-              >
-                <Button.Template>
-                  <ControlTemplate TargetType="Button">
-                    <Border
-                      Background="#1C1C1C"
-                      BorderBrush="#333333"
-                      BorderThickness="1"
-                      CornerRadius="6"
-                      Padding="10,8"
-                    >
-                      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock
-                          Text="+"
-                          Foreground="#FFFFFF"
-                          FontWeight="Bold"
-                          FontSize="14"
-                          Margin="0,0,8,0"
-                          VerticalAlignment="Center"
-                        />
-                        <TextBlock
-                          Text="Drop more folders or click here"
-                          Foreground="#999999"
-                          FontSize="12"
-                          VerticalAlignment="Center"
-                        />
-                      </StackPanel>
-                    </Border>
-                  </ControlTemplate>
-                </Button.Template>
-              </Button>
-
-              <Border
-                Grid.Row="1"
-                Background="#141414"
-                CornerRadius="6"
-                BorderBrush="#222222"
-                BorderThickness="1"
-              >
-                <ListBox
-                  ItemsSource="{Binding PendingImportPaths}"
-                  Background="Transparent"
-                  BorderThickness="0"
-                  Padding="5"
-                >
-                  <ListBox.Resources>
-                    <SolidColorBrush
-                      x:Key="{x:Static SystemColors.HighlightBrushKey}"
-                      Color="#252525"
-                    />
-                    <SolidColorBrush
-                      x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"
-                      Color="#1A1A1A"
-                    />
-                  </ListBox.Resources>
-                  <ListBox.ItemTemplate>
-                    <DataTemplate>
-                      <Grid Margin="4,3">
-                        <Grid.ColumnDefinitions>
-                          <ColumnDefinition Width="Auto" />
-                          <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Path
-                          Grid.Column="0"
-                          Data="M21,3V15.5A3.5,3.5 0 0,1 17.5,19A3.5,3.5 0 0,1 14,15.5A3.5,3.5 0 0,1 17.5,12C18.04,12 18.55,12.12 19,12.34V6.47L9,8.6V17.5A3.5,3.5 0 0,1 5.5,21A3.5,3.5 0 0,1 2,17.5A3.5,3.5 0 0,1 5.5,14C6.04,14 6.55,14.12 7,14.34V6L21,3Z"
-                          Fill="#FFFFFF"
-                          Width="12"
-                          Height="12"
-                          Margin="0,0,8,0"
-                          Stretch="Fill"
-                          VerticalAlignment="Center"
-                        />
-                        <TextBlock
-                          Grid.Column="1"
-                          Text="{Binding DisplayName}"
-                          Foreground="#CCCCCC"
-                          FontSize="11"
-                          TextTrimming="CharacterEllipsis"
-                          ToolTip="{Binding FullPath}"
-                        />
-                      </Grid>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
-              </Border>
-            </Grid>
-          </Grid>
-
-          <Grid Grid.Row="0" Grid.Column="2">
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-            <Grid Grid.Row="0" Margin="0,0,0,16">
-              <TextBlock
-                Text="Categories"
-                Foreground="#888888"
-                FontSize="15"
-                FontWeight="Bold"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                Margin="4,0,0,0"
-              />
-              <TextBlock
-                Text="Target BPM"
-                Foreground="#888888"
-                FontSize="15"
-                FontWeight="Bold"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Center"
-                Margin="0,0,30,0"
-              />
-            </Grid>
-
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <StackPanel>
-                <ItemsControl ItemsSource="{Binding Categories}" Margin="0,0,0,10">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Grid Margin="0,0,0,10">
-                        <Border
-                          Background="#222222"
-                          CornerRadius="4"
-                          Padding="12,8"
-                          HorizontalAlignment="Left"
-                          Width="140"
-                        >
-                          <TextBox
-                            Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                            Style="{StaticResource InlineTextBox}"
-                            Foreground="White"
-                            FontSize="14"
-                          />
-                        </Border>
-                        <StackPanel
-                          Orientation="Horizontal"
-                          HorizontalAlignment="Right"
-                          VerticalAlignment="Center"
-                        >
-                          <Button
-                            Content="+"
-                            Style="{StaticResource CircleBpmButton}"
-                            Command="{Binding DataContext.IncrementBpmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                            CommandParameter="{Binding}"
-                          />
-                          <TextBlock
-                            Text="{Binding TargetBpm}"
-                            Foreground="White"
-                            FontSize="14"
-                            Width="50"
-                            TextAlignment="Center"
-                            VerticalAlignment="Center"
-                          />
-                          <Button
-                            Content="-"
-                            Style="{StaticResource CircleBpmButton}"
-                            Command="{Binding DataContext.DecrementBpmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                            CommandParameter="{Binding}"
-                          />
-                        </StackPanel>
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <Button
-                  Command="{Binding AddCategoryCommand}"
-                  Cursor="Hand"
-                  Height="42"
-                  Margin="0,4,0,10"
-                >
-                  <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                      <Grid>
-                        <Rectangle
-                          Stroke="#333333"
-                          StrokeThickness="1.5"
-                          StrokeDashArray="4 4"
-                          RadiusX="6"
-                          RadiusY="6"
-                          Fill="#1C1C1C"
-                        />
-                        <StackPanel
-                          Orientation="Horizontal"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"
-                        >
-                          <TextBlock
-                            Text="+"
-                            Foreground="#777777"
-                            FontWeight="Bold"
-                            FontSize="16"
-                            Margin="0,0,8,1"
-                            VerticalAlignment="Center"
-                          />
-                          <TextBlock
-                            Text="Add custom category"
-                            Foreground="#777777"
-                            FontSize="13"
-                            FontWeight="Medium"
-                            VerticalAlignment="Center"
-                          />
-                        </StackPanel>
-                      </Grid>
-                    </ControlTemplate>
-                  </Button.Template>
-                </Button>
-              </StackPanel>
-            </ScrollViewer>
-          </Grid>
+          <views:CategoryEditor Grid.Row="0" Grid.Column="2" />
 
           <Button
             Grid.Row="1"
@@ -2448,14 +1853,13 @@
           </Button>
         </Grid>
       </Grid>
+      <StackPanel
+        x:Name="ToastContainer"
+        VerticalAlignment="Bottom"
+        HorizontalAlignment="Right"
+        Margin="0,0,24,24"
+        Panel.ZIndex="100"
+      />
     </Grid>
-
-    <StackPanel
-      x:Name="ToastContainer"
-      VerticalAlignment="Bottom"
-      HorizontalAlignment="Right"
-      Margin="0,0,24,24"
-      Panel.ZIndex="100"
-    />
   </Grid>
 </Window>

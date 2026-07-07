@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using CommunityToolkit.Mvvm.Messaging;
 using VibeMP.Models;
 using VibeMP.ViewModels;
 
@@ -12,6 +13,13 @@ namespace VibeMP.Views
         public MainWindow()
         {
             InitializeComponent();
+            WeakReferenceMessenger.Default.Register<NotificationToast>(
+                this,
+                (recipient, message) =>
+                {
+                    ShowToastNotification(message.Title, message.Message);
+                }
+            );
         }
 
         private void Minimize_Click(object sender, RoutedEventArgs e)
@@ -32,6 +40,8 @@ namespace VibeMP.Views
 
         private async void Window_Drop(object sender, DragEventArgs e)
         {
+            e.Handled = true;
+
             if (
                 e.Data.GetDataPresent(DataFormats.FileDrop)
                 && DataContext is MainViewModel viewModel
@@ -40,30 +50,6 @@ namespace VibeMP.Views
                 var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
 
                 await viewModel.ImportPathsAsync(paths);
-
-                ShowToastNotification(
-                    "Library Import Successful!",
-                    "Tracks added and categorized."
-                );
-            }
-        }
-
-        private async void SelectFolder_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new Microsoft.Win32.OpenFolderDialog
-            {
-                Title = "Select Music Folder",
-                Multiselect = false,
-            };
-
-            if (dialog.ShowDialog() == true && DataContext is MainViewModel viewModel)
-            {
-                await viewModel.ImportPathsAsync(new[] { dialog.FolderName });
-
-                ShowToastNotification(
-                    "Library Import Successful!",
-                    "Tracks added and categorized."
-                );
             }
         }
 
@@ -90,69 +76,43 @@ namespace VibeMP.Views
             }
         }
 
-        private void ShowToastNotification(string title, string message)
+        private async void ShowToastNotification(string title, string message)
         {
-            var toast = new Border
+            var notificationData = new NotificationToast { Title = title, Message = message };
+
+            var toastControl = new ContentControl
             {
-                Background = new SolidColorBrush(
-                    (Color)ColorConverter.ConvertFromString("#2D2D2D")
-                ),
-                BorderBrush = new SolidColorBrush(
-                    (Color)ColorConverter.ConvertFromString("#FF4B4B")
-                ),
-                BorderThickness = new Thickness(1, 0, 0, 0),
-                CornerRadius = new CornerRadius(4),
-                Width = 280,
-                Height = 65,
-                Padding = new Thickness(12, 8, 12, 8),
+                Content = notificationData,
                 RenderTransform = new TranslateTransform(300, 0),
             };
 
-            var stack = new StackPanel();
-            stack.Children.Add(
-                new TextBlock
-                {
-                    Text = title,
-                    Foreground = Brushes.White,
-                    FontWeight = FontWeights.Bold,
-                    FontSize = 13,
-                }
-            );
-            stack.Children.Add(
-                new TextBlock
-                {
-                    Text = message,
-                    Foreground = Brushes.DarkGray,
-                    FontSize = 11,
-                    Margin = new Thickness(0, 2, 0, 0),
-                }
-            );
-            toast.Child = stack;
-
             ToastContainer.Children.Clear();
-            ToastContainer.Children.Add(toast);
+            ToastContainer.Children.Add(toastControl);
 
             var anim = new DoubleAnimation(300, 0, TimeSpan.FromMilliseconds(350))
             {
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
             };
-            toast.RenderTransform.BeginAnimation(TranslateTransform.XProperty, anim);
+            toastControl.RenderTransform.BeginAnimation(TranslateTransform.XProperty, anim);
 
-            Task.Delay(3500)
-                .ContinueWith(_ =>
-                    Dispatcher.Invoke(() =>
-                    {
-                        var hideAnim = new DoubleAnimation(0, 300, TimeSpan.FromMilliseconds(300))
-                        {
-                            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn },
-                        };
-                        hideAnim.Completed += (s, e) => ToastContainer.Children.Remove(toast);
-                        toast.RenderTransform.BeginAnimation(
-                            TranslateTransform.XProperty,
-                            hideAnim
-                        );
-                    })
-                );
+            try
+            {
+                await Task.Delay(3500);
+
+                if (Application.Current == null || Dispatcher.HasShutdownStarted)
+                    return;
+
+                var hideAnim = new DoubleAnimation(0, 300, TimeSpan.FromMilliseconds(300))
+                {
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn },
+                };
+                hideAnim.Completed += (s, e) => ToastContainer.Children.Remove(toastControl);
+                toastControl.RenderTransform.BeginAnimation(TranslateTransform.XProperty, hideAnim);
+            }
+            catch
+            {
+                // Silently handle exceptions
+            }
         }
 
         private void PreviewMouseWheel_BubblingFix(

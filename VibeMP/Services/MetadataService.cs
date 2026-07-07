@@ -1,9 +1,10 @@
 ﻿using System.IO;
+using VibeMP.Core.Interfaces;
 using VibeMP.Models;
 
 namespace VibeMP.Services
 {
-    public class MetadataService
+    public class MetadataService : IMetadataService
     {
         public async Task<Track> GetTrackMetadataAsync(string filePath)
         {
@@ -29,6 +30,8 @@ namespace VibeMP.Services
                                     ? tFile.Tag.FirstAlbumArtist
                                     : "Unknown Artist"
                             );
+
+                        track.Album = tFile.Tag.Album;
 
                         if (tFile.Tag.Pictures != null && tFile.Tag.Pictures.Length > 0)
                         {

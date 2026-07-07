@@ -1,18 +1,28 @@
-﻿using System.IO;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.IO;
 using System.Windows.Media.Imaging;
+using VibeMP.Core.Interfaces;
 
 namespace VibeMP.Models
 {
-    public class Track
+    public class Track : ITrackMetadata
     {
+        [Key]
         public int Id { get; set; }
-        public string Title { get; set; } = string.Empty;
-        public string Artist { get; set; } = "Unknown Artist";
-        public double Bpm { get; set; }
         public string FilePath { get; set; } = string.Empty;
+        public string? Title { get; set; }
+        public string? Artist { get; set; }
+        public string? Album { get; set; }
+        public double Bpm { get; set; }
         public int? CategoryId { get; set; }
         public byte[]? AlbumArtBytes { get; set; }
+        public DateTime DateAnalyzed { get; set; }
 
+        [NotMapped]
+        public TimeSpan Duration { get; set; } = TimeSpan.Zero;
+
+        [NotMapped]
         public BitmapImage? AlbumArt
         {
             get
@@ -27,9 +37,7 @@ namespace VibeMP.Models
                     {
                         stream.Position = 0;
                         bitmap.BeginInit();
-
                         bitmap.CacheOption = BitmapCacheOption.OnLoad;
-
                         bitmap.StreamSource = stream;
                         bitmap.EndInit();
                     }

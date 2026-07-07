@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using VibeMP.Data;
-using VibeMP.Services.BpmAnalysis;
 
 namespace VibeMP.Services
 {
@@ -18,7 +17,8 @@ namespace VibeMP.Services
 
         public async Task ImportFilesAsync(
             IEnumerable<string> filePaths,
-            Action<string, int, int> progressCallback
+            Action<string, int, int> batchProgressCallback,
+            Action<string, int>? trackProgressCallback = null
         )
         {
             var pathsList = filePaths.ToList();
@@ -28,13 +28,12 @@ namespace VibeMP.Services
             await Task.Run(async () =>
             {
                 using var db = new LibraryContext();
-
                 var categories = db.Categories.ToList();
 
                 foreach (var path in pathsList)
                 {
                     current++;
-                    progressCallback?.Invoke(path, current, total);
+                    batchProgressCallback?.Invoke(path, current, total);
 
                     try
                     {
@@ -48,7 +47,14 @@ namespace VibeMP.Services
 
                         var newTrack = await _metadataService.GetTrackMetadataAsync(path);
 
-                        float calculatedBpm = _analyzer.Analyze(path);
+                        float calculatedBpm = _analyzer.Analyze(
+                            path,
+                            percentage =>
+                            {
+                                trackProgressCallback?.Invoke(path, percentage);
+                            }
+                        );
+
                         int? assignedCategoryId = categories
                             .OrderBy(c => Math.Abs(calculatedBpm - c.TargetBpm))
                             .FirstOrDefault()
@@ -78,7 +84,8 @@ namespace VibeMP.Services
 
         public async Task ImportPathsAsync(
             IEnumerable<string> paths,
-            Action<string, int, int>? progressCallback = null
+            Action<string, int, int> batchProgress,
+            Action<string, int> trackProgress
         )
         {
             var files = new List<string>();
@@ -111,7 +118,7 @@ namespace VibeMP.Services
                 }
             }
 
-            await ImportFilesAsync(files, progressCallback!);
+            await ImportFilesAsync(files, batchProgress, trackProgress);
         }
     }
 }

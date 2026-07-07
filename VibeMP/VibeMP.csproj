@@ -7,6 +7,12 @@
     <UseWPF>true</UseWPF>
     <NoWarn>NU1903</NoWarn>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Services\BpmAnalysis\**" />
+    <EmbeddedResource Remove="Services\BpmAnalysis\**" />
+    <None Remove="Services\BpmAnalysis\**" />
+    <Page Remove="Services\BpmAnalysis\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Remove="Resources\Assets\vibeify.ico" />

@@ -10,21 +10,22 @@ namespace VibeMP
         {
             base.OnStartup(e);
 
-            /*            string appData = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                        string dbFolder = Path.Combine(appData, "Vibeify");
-                        string dbPath = Path.Combine(dbFolder, "vibeify.db");
+            /*           var folder = Environment.SpecialFolder.LocalApplicationData;
+                       var path = Environment.GetFolderPath(folder);
+                       var appFolder = Path.Combine(path, "Vibeify");
+                       var dbPath = Path.Combine(appFolder, "vibeify.db");
 
-                        if (File.Exists(dbPath))
-                        {
-                            try
-                            {
-                                File.Delete(dbPath);
-                            }
-                            catch (Exception exc)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"Could not auto-delete DB: {exc.Message}");
-                            }
-                        }*/
+                       if (File.Exists(dbPath))
+                       {
+                           try
+                           {
+                               File.Delete(dbPath);
+                           }
+                           catch (Exception exc)
+                           {
+                               System.Diagnostics.Debug.WriteLine($"Could not auto-delete DB: {exc.Message}");
+                           }
+                       }*/
 
             InitializeDatabase();
         }

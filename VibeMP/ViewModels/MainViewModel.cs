@@ -1,46 +1,41 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
+using VibeMP.Audio;
+using VibeMP.Core.Interfaces;
 using VibeMP.Data;
 using VibeMP.Models;
 using VibeMP.Services;
-using VibeMP.Views;
 
 namespace VibeMP.ViewModels
 {
-    /// <summary>
-    /// Ein einfacher Helfer, um den Namen und den Pfad von importierten Liedern kurz zu speichern.
-    /// </summary>
-    public class PendingItem
+    public partial class PendingItem : ObservableObject
     {
         public string DisplayName { get; set; } = string.Empty;
         public string FullPath { get; set; } = string.Empty;
+        public bool IsFolder { get; set; }
+
+        [ObservableProperty]
+        private int _progressPercent = 0;
     }
 
-    /// <summary>
-    /// Der Haupt-Manager der Anwendung. Steuert das Laden der Daten, den Musik-Import,
-    /// den aktuellen Zustand der UI und die Steuerung des Media-Players.
-    /// </summary>
     public partial class MainViewModel : ObservableObject
     {
-        #region Private Felder
+        #region Private Fields
+        private readonly ILibraryRepository _repository = new LibraryRepository();
+        private readonly IAudioEngine _audioEngine = new NAudioEngine();
         private readonly LibraryManager _libraryManager = new();
         private readonly System.Windows.Threading.DispatcherTimer _playbackTimer;
         private int _activeImportCount = 0;
         #endregion
 
-        #region UI Zustand Eigenschaften
-        /// <summary>
-        /// Bestimmt, welcher Bildschirm (Onboarding, Fixer oder Dashboard) gerade angezeigt wird.
-        /// </summary>
+        #region UI State Properties
         [ObservableProperty]
         private AppViewState _currentViewState = AppViewState.Onboarding;
 
-        /// <summary>
-        /// Zeigt an, ob die App im Hintergrund arbeitet. Schaltet automatisch Buttons in der UI an/aus.
-        /// </summary>
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(CompleteOnboardingCommand))]
         [NotifyCanExecuteChangedFor(nameof(CloseSettingsCommand))]
@@ -53,7 +48,7 @@ namespace VibeMP.ViewModels
         private bool _isHomeSelected = true;
         #endregion
 
-        #region Fortschritts-Eigenschaften
+        #region Progress & Tracking Properties
         [ObservableProperty]
         private int _scanProgressValue = 0;
 
@@ -62,11 +57,13 @@ namespace VibeMP.ViewModels
 
         [ObservableProperty]
         private bool _hasPendingImports;
+
+        // Custom validation error binding to feed user notification text blocks safely
+        [ObservableProperty]
+        private string? _validationErrorMessage;
         #endregion
 
-        #region Media Player & Lautstärke Eigenschaften
-        private readonly System.Windows.Media.MediaPlayer _mediaPlayer = new();
-
+        #region Media Player & Volume Properties
         [ObservableProperty]
         private double _playbackVolume = 0.75;
 
@@ -95,7 +92,7 @@ namespace VibeMP.ViewModels
         private double _lastReportedEnginePosition = 0;
         #endregion
 
-        #region Listen & Selektionen
+        #region Collections & Selection Properties
         public ObservableCollection<PendingItem> PendingImportPaths { get; } = new();
         public ObservableCollection<Track> ZeroBpmTracks { get; } = new();
         public ObservableCollection<VibeCategory> Categories { get; } = new();
@@ -108,11 +105,11 @@ namespace VibeMP.ViewModels
         private Track? _selectedTrack;
         #endregion
 
-        #region Konstruktor & Initialisierung
+        #region Constructor & Initialization
         public MainViewModel()
         {
-            _mediaPlayer.Volume = 0.75;
-            _mediaPlayer.MediaEnded += (s, e) => PlayNextTrack();
+            _audioEngine.Volume = 0.75f;
+            _audioEngine.PlaybackFinished += (s, e) => PlayNextTrack();
             LoadCategoriesFromDb();
 
             _playbackTimer = new System.Windows.Threading.DispatcherTimer
@@ -122,10 +119,7 @@ namespace VibeMP.ViewModels
             _playbackTimer.Tick += PlaybackTimer_Tick;
             _playbackTimer.Start();
 
-            using var db = new LibraryContext();
-            bool hasExistingLibrary = db.Tracks.Any();
-
-            if (hasExistingLibrary)
+            if (_repository.HasTracks())
             {
                 LoadDashboardRows();
                 CurrentViewState = AppViewState.Dashboard;
@@ -137,7 +131,7 @@ namespace VibeMP.ViewModels
         }
         #endregion
 
-        #region Event Handler für Eigenschaftsänderungen
+        #region Property Changed Event Handlers
         partial void OnSelectedCategoryChanged(VibeCategory? value)
         {
             if (value != null)
@@ -148,27 +142,28 @@ namespace VibeMP.ViewModels
         }
         #endregion
 
-        #region Hintergrund-Timer für die Musikwiedergabe
-        /// <summary>
-        /// Aktualisiert jede halbe Sekunde die Zeitleiste des Liedes im UI.
-        /// Verhindert Ruckler und falsche Sprünge beim Vor- oder Zurückspulen.
-        /// </summary>
+        #region Background Playback Timer Tick
         private void PlaybackTimer_Tick(object? sender, EventArgs e)
         {
             if (SelectedTrack == null || !IsPlaying || Application.Current.MainWindow == null)
                 return;
 
-            if (Application.Current.MainWindow is MainWindow mainWindow && mainWindow.IsDraggingProgress)
+            if (
+                Application.Current.MainWindow is Views.MainWindow mainWindow
+                && mainWindow.IsDraggingProgress
+            )
                 return;
 
-            if (_mediaPlayer.NaturalDuration.HasTimeSpan)
-            {
-                PlaybackDurationSeconds = _mediaPlayer.NaturalDuration.TimeSpan.TotalSeconds;
-                var duration = _mediaPlayer.NaturalDuration.TimeSpan;
-                PlaybackDurationString = string.Format("{0}:{1:D2}", (int)duration.TotalMinutes, duration.Seconds);
-            }
+            TimeSpan totalDuration = _audioEngine.TotalTime;
+            PlaybackDurationSeconds =
+                totalDuration.TotalSeconds > 0 ? totalDuration.TotalSeconds : 1;
+            PlaybackDurationString = string.Format(
+                "{0}:{1:D2}",
+                (int)totalDuration.TotalMinutes,
+                totalDuration.Seconds
+            );
 
-            double currentEnginePosition = _mediaPlayer.Position.TotalSeconds;
+            double currentEnginePosition = _audioEngine.CurrentTime.TotalSeconds;
             double delta = currentEnginePosition - _lastReportedEnginePosition;
             _lastReportedEnginePosition = currentEnginePosition;
 
@@ -191,17 +186,14 @@ namespace VibeMP.ViewModels
         }
         #endregion
 
-        #region Media Player Audio APIs
-        /// <summary>
-        /// Spult das aktuelle Lied an die vom Nutzer gewählte Sekunde.
-        /// </summary>
+        #region Public Media Player Control Audio APIs
         public void SeekToPosition(double seconds)
         {
             if (SelectedTrack == null)
                 return;
 
             _lastSeekTime = DateTime.Now;
-            _mediaPlayer.Position = TimeSpan.FromSeconds(seconds);
+            _audioEngine.CurrentTime = TimeSpan.FromSeconds(seconds);
 
             PlaybackProgressSeconds = seconds;
             PlaybackPositionString = string.Format(
@@ -211,27 +203,19 @@ namespace VibeMP.ViewModels
             );
         }
 
-        /// <summary>
-        /// Wird automatisch aufgerufen, wenn der Nutzer den Lautstärkeregler verschiebt.
-        /// </summary>
         partial void OnPlaybackVolumeChanged(double value)
         {
-            if (_mediaPlayer != null)
+            if (_audioEngine != null)
             {
-                _mediaPlayer.Volume = value;
+                _audioEngine.Volume = (float)value;
             }
         }
         #endregion
 
-        #region Datenbank-Operationen
-        /// <summary>
-        /// Lädt alle Kategorien und Lieder aus der SQLite-Datenbank.
-        /// Berechnet per Abstandsmessung (Math.Abs), welches Lied am besten in welche BPM-Kategorie passt.
-        /// </summary>
+        #region Database Data Hydration Operations
         public void LoadDashboardRows()
         {
-            using var db = new LibraryContext();
-            var dbCategories = db.Categories.ToList();
+            var dbCategories = _repository.GetAllCategories();
 
             Categories.Clear();
             foreach (var cat in dbCategories)
@@ -243,7 +227,7 @@ namespace VibeMP.ViewModels
             if (Categories.Count == 0)
                 return;
 
-            var allTracks = db.Tracks.ToList();
+            var allTracks = _repository.GetAllTracks();
             foreach (var track in allTracks)
             {
                 var closestCategory = Categories
@@ -268,8 +252,7 @@ namespace VibeMP.ViewModels
 
         private void LoadCategoriesFromDb()
         {
-            using var db = new LibraryContext();
-            var dbCategories = db.Categories.ToList();
+            var dbCategories = _repository.GetAllCategories();
 
             Categories.Clear();
             foreach (var category in dbCategories)
@@ -279,32 +262,28 @@ namespace VibeMP.ViewModels
 
             if (Categories.Count == 0)
             {
-                Categories.Add(new VibeCategory { Name = "Gaming", TargetBpm = 120, IsPreset = true });
-                Categories.Add(new VibeCategory { Name = "Studying", TargetBpm = 80, IsPreset = true });
+                Categories.Add(
+                    new VibeCategory
+                    {
+                        Name = "Gaming",
+                        TargetBpm = 120,
+                        IsPreset = true,
+                    }
+                );
+                Categories.Add(
+                    new VibeCategory
+                    {
+                        Name = "Studying",
+                        TargetBpm = 80,
+                        IsPreset = true,
+                    }
+                );
             }
         }
 
         private void SaveCategoriesToDb()
         {
-            using var db = new LibraryContext();
-
-            foreach (var uiCategory in Categories)
-            {
-                if (uiCategory.Id > 0)
-                {
-                    var dbCategory = db.Categories.Find(uiCategory.Id);
-                    if (dbCategory != null)
-                    {
-                        dbCategory.Name = uiCategory.Name;
-                        dbCategory.TargetBpm = uiCategory.TargetBpm;
-                    }
-                }
-                else
-                {
-                    db.Categories.Add(uiCategory);
-                }
-            }
-            db.SaveChanges();
+            _repository.SaveCategories(Categories);
         }
 
         private void UpdateDashboardTracks()
@@ -320,11 +299,25 @@ namespace VibeMP.ViewModels
         }
         #endregion
 
-        #region Musik-Import Pipelines (Asynchron)
-        /// <summary>
-        /// Durchsucht Ordner und Dateien im Hintergrund, analysiert die BPM und speichert sie ab.
-        /// Blockiert dabei nicht die Benutzeroberfläche.
-        /// </summary>
+        public void UpdateCategoryBpmDirectly(VibeCategory category, string text)
+        {
+            if (category == null) return;
+
+            if (!int.TryParse(text, out int parsedBpm) || parsedBpm < 30 || parsedBpm > 250)
+            {
+                category.RowErrorMessage = "Please type a valid number between 30 and 250.";
+            }
+            else
+            {
+                category.RowErrorMessage = null;
+                category.TargetBpm = parsedBpm;
+            }
+
+            CompleteOnboardingCommand?.NotifyCanExecuteChanged();
+            CloseSettingsCommand?.NotifyCanExecuteChanged();
+        }
+
+        #region Core Music Import Asynchronous Pipelines
         public async Task ImportPathsAsync(IEnumerable<string> paths)
         {
             try
@@ -340,24 +333,72 @@ namespace VibeMP.ViewModels
 
                     if (File.Exists(p) && !PendingImportPaths.Any(item => item.FullPath == p))
                     {
-                        PendingImportPaths.Add(new PendingItem { FullPath = p, DisplayName = Path.GetFileName(p) });
+                        PendingImportPaths.Add(
+                            new PendingItem
+                            {
+                                FullPath = p,
+                                DisplayName = Path.GetFileName(p),
+                                IsFolder = false,
+                            }
+                        );
                     }
-                    else if (Directory.Exists(p) && !PendingImportPaths.Any(item => item.FullPath == p))
+                    else if (
+                        Directory.Exists(p) && !PendingImportPaths.Any(item => item.FullPath == p)
+                    )
                     {
-                        PendingImportPaths.Add(new PendingItem { FullPath = p, DisplayName = $"{Path.GetFileName(p)}" });
+                        PendingImportPaths.Add(
+                            new PendingItem
+                            {
+                                FullPath = p,
+                                DisplayName = $"{Path.GetFileName(p)}",
+                                IsFolder = true,
+                            }
+                        );
                     }
                 }
 
-                await _libraryManager.ImportPathsAsync(paths, (filePath, current, total) =>
-                {
-                    Application.Current.Dispatcher.Invoke(() =>
+                await _libraryManager.ImportPathsAsync(
+                    paths,
+                    (filePath, current, total) =>
                     {
-                        string friendlyName = Path.GetFileName(filePath);
-                        StatusText = $"Importing & Analyzing song {current} of {total}: {friendlyName}";
-                        ScanProgressMax = total;
-                        ScanProgressValue = current;
-                    });
-                });
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            string friendlyName = Path.GetFileName(filePath);
+                            StatusText =
+                                $"Importing & Analyzing song {current} of {total}: {friendlyName}";
+                            ScanProgressMax = total;
+                            ScanProgressValue = current;
+
+                            var matchingUiItem = PendingImportPaths.FirstOrDefault(item =>
+                                filePath.StartsWith(
+                                    item.FullPath,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            );
+
+                            if (matchingUiItem != null && matchingUiItem.IsFolder)
+                            {
+                                matchingUiItem.ProgressPercent = (int)(
+                                    ((double)current / total) * 100
+                                );
+                            }
+                        });
+                    },
+                    (filePath, trackPercentage) =>
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            var matchingUiItem = PendingImportPaths.FirstOrDefault(item =>
+                                item.FullPath == filePath
+                            );
+
+                            if (matchingUiItem != null && !matchingUiItem.IsFolder)
+                            {
+                                matchingUiItem.ProgressPercent = trackPercentage;
+                            }
+                        });
+                    }
+                );
 
                 HasPendingImports = PendingImportPaths.Count > 0;
                 StatusText = "All songs successfully added and analyzed.";
@@ -375,6 +416,18 @@ namespace VibeMP.ViewModels
             {
                 _activeImportCount--;
                 IsProcessing = _activeImportCount > 0;
+
+                if (_activeImportCount == 0 && PendingImportPaths.Count > 0)
+                {
+                    WeakReferenceMessenger.Default.Send(
+                        new NotificationToast
+                        {
+                            Title = "Track(s) Analyzed",
+                            Message = "All tracks have been successfully analyzed.",
+                        }
+                    );
+                }
+
                 Application.Current?.Dispatcher?.Invoke(() =>
                 {
                     CompleteOnboardingCommand?.NotifyCanExecuteChanged();
@@ -383,7 +436,7 @@ namespace VibeMP.ViewModels
         }
         #endregion
 
-        #region Navigation Befehle
+        #region Navigation Relay Commands
         [RelayCommand]
         private void SelectHome()
         {
@@ -412,53 +465,64 @@ namespace VibeMP.ViewModels
             await Task.CompletedTask;
         }
 
-        private bool CanCloseSettings() => !IsProcessing;
+        private bool CanCloseSettings()
+        {
+            return Categories.Count >= 2 && !Categories.Any(c => !string.IsNullOrEmpty(c.RowErrorMessage));
+        }
 
-        /// <summary>
-        /// Schließt die Einstellungen. Wenn der Nutzer BPM-Regler verändert hat, 
-        /// werden alle Lieder vollautomatisch im Hintergrund neu sortiert.
-        /// </summary>
         [RelayCommand(CanExecute = nameof(CanCloseSettings))]
         private async Task CloseSettingsAsync()
         {
+            if (Categories.Count < 2)
+            {
+                WeakReferenceMessenger.Default.Send(
+                    new NotificationToast
+                    {
+                        Title = "Save Failed",
+                        Message = "You must have at least 2 categories.",
+                    }
+                );
+                return;
+            }
+
             IsProcessing = true;
 
-            using (var dbCheck = new LibraryContext())
+            var dbCategories = _repository.GetAllCategories();
+            bool structuralChangesMade = false;
+
+            foreach (var uiCategory in Categories)
             {
-                var dbCategories = dbCheck.Categories.ToList();
-                bool structuralChangesMade = false;
-
-                foreach (var uiCategory in Categories)
+                if (uiCategory.Id == 0)
                 {
-                    if (uiCategory.Id == 0)
-                    {
-                        structuralChangesMade = true;
-                        break;
-                    }
-
-                    var dbMatch = dbCategories.FirstOrDefault(c => c.Id == uiCategory.Id);
-                    if (dbMatch == null || dbMatch.Name != uiCategory.Name || dbMatch.TargetBpm != uiCategory.TargetBpm)
-                    {
-                        structuralChangesMade = true;
-                        break;
-                    }
+                    structuralChangesMade = true;
+                    break;
                 }
 
-                if (!structuralChangesMade && PendingImportPaths.Count == 0)
+                var dbMatch = dbCategories.FirstOrDefault(c => c.Id == uiCategory.Id);
+                if (
+                    dbMatch == null
+                    || dbMatch.Name != uiCategory.Name
+                    || dbMatch.TargetBpm != uiCategory.TargetBpm
+                )
                 {
-                    IsProcessing = false;
-                    IsHomeSelected = true;
-                    CurrentViewState = AppViewState.Dashboard;
-                    return;
+                    structuralChangesMade = true;
+                    break;
                 }
+            }
+
+            if (!structuralChangesMade && PendingImportPaths.Count == 0)
+            {
+                IsProcessing = false;
+                IsHomeSelected = true;
+                CurrentViewState = AppViewState.Dashboard;
+                return;
             }
 
             bool hasZeroBpmAnomalies = false;
 
             await Task.Run(() =>
             {
-                using var db = new LibraryContext();
-                var originalDbCategories = db.Categories.ToList();
+                var originalDbCategories = _repository.GetAllCategories();
                 bool requiresReassignment = false;
 
                 foreach (var uiCategory in Categories)
@@ -469,7 +533,9 @@ namespace VibeMP.ViewModels
                     }
                     else
                     {
-                        var dbMatch = originalDbCategories.FirstOrDefault(c => c.Id == uiCategory.Id);
+                        var dbMatch = originalDbCategories.FirstOrDefault(c =>
+                            c.Id == uiCategory.Id
+                        );
                         if (dbMatch != null && dbMatch.TargetBpm != uiCategory.TargetBpm)
                         {
                             requiresReassignment = true;
@@ -481,8 +547,8 @@ namespace VibeMP.ViewModels
 
                 if (requiresReassignment)
                 {
-                    var updatedCategories = db.Categories.ToList();
-                    var allTracks = db.Tracks.ToList();
+                    var updatedCategories = _repository.GetAllCategories();
+                    var allTracks = _repository.GetAllTracks();
 
                     foreach (var track in allTracks)
                     {
@@ -492,11 +558,10 @@ namespace VibeMP.ViewModels
 
                         track.CategoryId = closestCategory?.Id;
                     }
+                    _repository.UpdateTrackCategoryIds(allTracks);
                 }
 
-                db.SaveChanges();
-
-                var zeroTracks = db.Tracks.Where(t => t.Bpm <= 0).ToList();
+                var zeroTracks = _repository.GetAllTracks().Where(t => t.Bpm <= 0).ToList();
                 if (zeroTracks.Count > 0)
                 {
                     hasZeroBpmAnomalies = true;
@@ -528,21 +593,42 @@ namespace VibeMP.ViewModels
         }
         #endregion
 
-        #region Onboarding & BPM-Nachkorrektur Befehle
-        private bool CanCompleteOnboarding() => !IsProcessing && PendingImportPaths.Count > 0;
+        #region Library Setup & Triage Relay Commands
+        private bool CanCompleteOnboarding()
+        {
+            return Categories.Count >= 2
+                   && !Categories.Any(c => !string.IsNullOrEmpty(c.RowErrorMessage))
+                   && PendingImportPaths.Count > 0;
+        }
 
-        /// <summary>
-        /// Schließt die Ersteinrichtung ab. Falls Lieder mit 0 BPM gefunden wurden, 
-        /// wird der Nutzer zum BPM-Fixer geleitet, um Fehler manuell zu korrigieren.
-        /// </summary>
         [RelayCommand(CanExecute = nameof(CanCompleteOnboarding))]
         private void CompleteOnboarding()
         {
+            if (Categories.Count < 2)
+            {
+                WeakReferenceMessenger.Default.Send(
+                    new NotificationToast
+                    {
+                        Title = "Setup Incomplete",
+                        Message = "You must have at least 2 categories to continue.",
+                    }
+                );
+                return;
+            }
+
+            if (!CanCompleteOnboarding())
+            {
+                WeakReferenceMessenger.Default.Send(new NotificationToast
+                {
+                    Title = "Setup Incomplete",
+                    Message = "Please fix the invalid BPM values before continuing."
+                });
+                return;
+            }
+
             SaveCategoriesToDb();
 
-            using var db = new LibraryContext();
-            var allTracks = db.Tracks.ToList();
-
+            var allTracks = _repository.GetAllTracks();
             if (allTracks.Count == 0)
             {
                 StatusText = "Please connect or drop a music library folder first!";
@@ -550,7 +636,6 @@ namespace VibeMP.ViewModels
             }
 
             var zeroTracks = allTracks.Where(t => t.Bpm <= 0).ToList();
-
             if (zeroTracks.Count > 0)
             {
                 ZeroBpmTracks.Clear();
@@ -569,18 +654,15 @@ namespace VibeMP.ViewModels
             }
         }
 
-        /// <summary>
-        /// Speichert die manuell korrigierten BPM-Werte des Nutzers zurück in die Datenbank.
-        /// </summary>
         [RelayCommand]
         private void SaveManualBpms()
         {
-            using var db = new LibraryContext();
-            var dbCategories = db.Categories.ToList();
+            var allTracks = _repository.GetAllTracks();
+            var dbCategories = _repository.GetAllCategories();
 
             foreach (var uiTrack in ZeroBpmTracks)
             {
-                var dbTrack = db.Tracks.FirstOrDefault(t => t.FilePath == uiTrack.FilePath);
+                var dbTrack = allTracks.FirstOrDefault(t => t.FilePath == uiTrack.FilePath);
                 if (dbTrack != null)
                 {
                     dbTrack.Bpm = uiTrack.Bpm;
@@ -591,18 +673,41 @@ namespace VibeMP.ViewModels
                 }
             }
 
-            db.SaveChanges();
+            _repository.UpdateTrackCategoryIds(allTracks);
             LoadDashboardRows();
             CurrentViewState = AppViewState.Dashboard;
             StatusText = "Library successfully verified.";
         }
         #endregion
 
-        #region BPM Steuerungs-Befehle (+ / - Buttons)
+        #region Music Category Management Relay Commands
         [RelayCommand]
         private void AddCategory()
         {
-            Categories.Add(new VibeCategory { Name = "New Category", TargetBpm = 100, IsPreset = false });
+            Categories.Add(
+                new VibeCategory
+                {
+                    Name = "New Category",
+                    TargetBpm = 100,
+                    IsPreset = false,
+                }
+            );
+        }
+
+        [RelayCommand]
+        private void DeleteCategory(VibeCategory category)
+        {
+            if (category == null)
+                return;
+
+            _repository.DeleteCategory(category.Id);
+            Categories.Remove(category);
+
+            if (SelectedCategory?.Id == category.Id)
+            {
+                SelectHome();
+            }
+            LoadDashboardRows();
         }
 
         [RelayCommand]
@@ -630,10 +735,7 @@ namespace VibeMP.ViewModels
         }
         #endregion
 
-        #region Media Player Audio Steuerung (Play, Pause, Shuffle, Repeat)
-        /// <summary>
-        /// Öffnet eine Musikdatei und startet die Wiedergabe über den Windows Media Player.
-        /// </summary>
+        #region Media Player Audio Control Relay Commands
         [RelayCommand]
         private void PlaySpecificTrack(Track track)
         {
@@ -650,14 +752,11 @@ namespace VibeMP.ViewModels
 
             try
             {
-                _mediaPlayer.Open(new Uri(SelectedTrack.FilePath));
-                _mediaPlayer.Play();
+                _audioEngine.Load(SelectedTrack.FilePath);
+                _audioEngine.Play();
                 IsPlaying = true;
-
-                PlaybackProgressSeconds = 0;
                 _lastReportedEnginePosition = 0;
-
-                System.Diagnostics.Debug.WriteLine($"Playing: {SelectedTrack.Title}");
+                PlaybackProgressSeconds = 0;
             }
             catch (Exception ex)
             {
@@ -676,11 +775,11 @@ namespace VibeMP.ViewModels
 
             if (IsPlaying)
             {
-                _mediaPlayer.Play();
+                _audioEngine.Play();
             }
             else
             {
-                _mediaPlayer.Pause();
+                _audioEngine.Pause();
             }
         }
 
@@ -696,17 +795,15 @@ namespace VibeMP.ViewModels
             IsRepeatEnabled = !IsRepeatEnabled;
         }
 
-        /// <summary>
-        /// Berechnet das nächste Lied innerhalb der aktuellen Kategorie. 
-        /// Berücksichtigt den Zufallsmodus (Shuffle) und die Endlos-Schleife (Repeat).
-        /// </summary>
         [RelayCommand]
         private void PlayNextTrack()
         {
             if (SelectedTrack == null)
                 return;
 
-            var currentCategory = Categories.FirstOrDefault(c => c.CategoryTracks.Contains(SelectedTrack));
+            var currentCategory = Categories.FirstOrDefault(c =>
+                c.CategoryTracks.Contains(SelectedTrack)
+            );
             if (currentCategory == null)
                 return;
 
@@ -739,8 +836,7 @@ namespace VibeMP.ViewModels
                 else
                 {
                     IsPlaying = false;
-                    _mediaPlayer.Stop();
-                    _mediaPlayer.Position = TimeSpan.Zero;
+                    _audioEngine.Stop();
                     PlaybackProgressSeconds = 0;
                     _lastReportedEnginePosition = 0;
                 }
@@ -753,7 +849,9 @@ namespace VibeMP.ViewModels
             if (SelectedTrack == null)
                 return;
 
-            var currentCategory = Categories.FirstOrDefault(c => c.CategoryTracks.Contains(SelectedTrack));
+            var currentCategory = Categories.FirstOrDefault(c =>
+                c.CategoryTracks.Contains(SelectedTrack)
+            );
             if (currentCategory == null)
                 return;
 
@@ -766,7 +864,7 @@ namespace VibeMP.ViewModels
             }
             else
             {
-                _mediaPlayer.Position = TimeSpan.Zero;
+                _audioEngine.CurrentTime = TimeSpan.Zero;
                 PlaybackProgressSeconds = 0;
                 _lastReportedEnginePosition = 0;
             }
@@ -786,6 +884,34 @@ namespace VibeMP.ViewModels
             {
                 await ImportPathsAsync(dialog.FileNames);
                 HasPendingImports = PendingImportPaths.Count > 0;
+            }
+        }
+
+        [RelayCommand]
+        private async Task AddFolderAsync()
+        {
+            try
+            {
+                var dialog = new Microsoft.Win32.OpenFolderDialog
+                {
+                    Title = "Select Music Folder",
+                    Multiselect = false,
+                };
+
+                if (dialog.ShowDialog(Application.Current.MainWindow) == true)
+                {
+                    string cleanPath = dialog.FolderName.TrimEnd(
+                        Path.DirectorySeparatorChar,
+                        Path.AltDirectorySeparatorChar
+                    );
+
+                    await ImportPathsAsync(new[] { cleanPath });
+                    HasPendingImports = PendingImportPaths.Count > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Folder dialog error: {ex.Message}";
             }
         }
         #endregion

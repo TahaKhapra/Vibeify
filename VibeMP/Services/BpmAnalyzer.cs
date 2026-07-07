@@ -1,21 +1,15 @@
 ﻿using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
-namespace VibeMP.Services.BpmAnalysis
+namespace VibeMP.Services
 {
-    /// <summary>
-    /// Analyzes audio files to estimate their Beats Per Minute (BPM).
-    /// Uses frequency splitting, onset flux detection, and multi-position sampling.
-    /// </summary>
     public class BpmAnalyzer
     {
-        /// <summary>
-        /// Analyzes the specified audio file and returns the estimated BPM.
-        /// </summary>
-        /// <param name="filePath">The full disk path to the audio file to analyze.</param>
-        /// <param name="isRetry">An optional flag indicating if this is a retry attempt (currently unused).</param>
-        /// <returns>The estimated BPM as a float rounded to two decimal places, or 0 if analysis fails.</returns>
-        public float Analyze(string filePath, bool isRetry = false)
+        public float Analyze(
+            string filePath,
+            Action<int>? progressCallback = null,
+            bool isRetry = false
+        )
         {
             try
             {
@@ -26,16 +20,14 @@ namespace VibeMP.Services.BpmAnalysis
                     totalSeconds = reader.TotalTime.TotalSeconds;
                 }
 
-                // Open a single vote list to pool results from different parts of the song
                 var votes = new List<float>();
 
-                // Vote 1: Analyze 45 seconds of audio starting at 20% into the song
-                CollectVotes(filePath, totalSeconds, 0.20, votes);
+                CollectVotes(filePath, totalSeconds, 0.20, votes, progressCallback, 0);
 
-                // Vote 2: Analyze 45 seconds of audio starting at 50% into the song (midpoint)
-                CollectVotes(filePath, totalSeconds, 0.50, votes);
+                CollectVotes(filePath, totalSeconds, 0.50, votes, progressCallback, 50);
 
-                // Aggregate the votes and calculate the final BPM consensus
+                progressCallback?.Invoke(100);
+
                 return FinalizeBpm(votes);
             }
             catch (Exception ex)
@@ -47,33 +39,25 @@ namespace VibeMP.Services.BpmAnalysis
             }
         }
 
-        /// <summary>
-        /// Collects BPM estimates from a specific section of the audio file and adds them to the votes list.
-        /// </summary>
-        /// <param name="filePath">The full disk path to the audio file.</param>
-        /// <param name="totalSeconds">The total duration of the track in seconds.</param>
-        /// <param name="skipFraction">The percentage of the track to skip before analyzing (e.g., 0.20 for 20%).</param>
-        /// <param name="votes">The mutable list where detected BPM values will be stored.</param>
         private void CollectVotes(
             string filePath,
             double totalSeconds,
             double skipFraction,
-            List<float> votes
+            List<float> votes,
+            Action<int>? progressCallback,
+            double baseProgress
         )
         {
             try
             {
                 using (var reader = new AudioFileReader(filePath))
                 {
-                    // Converts stereo to mono
                     var monoProvider = new StereoToMonoSampleProvider(reader);
                     int sampleRate = monoProvider.WaveFormat.SampleRate;
 
-                    // Detectors for low-frequency (bass) and high-frequency (snare/hi-hat) transients
                     var lowPassDetect = new SoundTouch.BpmDetect(1, sampleRate);
                     var highPassDetect = new SoundTouch.BpmDetect(1, sampleRate);
 
-                    // Manually consume samples to fast-forward to the target skip fraction
                     int skipSamples = (int)(sampleRate * (totalSeconds * skipFraction));
                     float[] skipBuffer = new float[8192];
                     int skipped = 0;
@@ -92,10 +76,10 @@ namespace VibeMP.Services.BpmAnalysis
                     float[] lowBuffer = new float[8192];
                     float[] highBuffer = new float[8192];
 
-                    float lpFiltered = 0;
-                    float lpPrev = 0,
-                        hpPrev = 0;
-                    float lpAlpha = 0.15f;
+                    float lpFiltered = 0,
+                        lpPrev = 0,
+                        hpPrev = 0,
+                        lpAlpha = 0.15f;
 
                     while (samplesRead < totalSamples)
                     {
@@ -108,21 +92,30 @@ namespace VibeMP.Services.BpmAnalysis
                             float raw = buffer[j];
 
                             lpFiltered = lpFiltered + lpAlpha * (raw - lpFiltered);
-
                             float lpFlux = Math.Max(0, Math.Abs(lpFiltered) - lpPrev);
-                            lowBuffer[j] = Math.Clamp(lpFlux * 30f, 0, 1.0f); // Amplify and clamp for SoundTouch
+                            lowBuffer[j] = Math.Clamp(lpFlux * 30f, 0, 1.0f);
                             lpPrev = Math.Abs(lpFiltered);
 
                             float hpSignal = raw - lpFiltered;
-
                             float hpFlux = Math.Max(0, Math.Abs(hpSignal) - hpPrev);
-                            highBuffer[j] = Math.Clamp(hpFlux * 40f, 0, 1.0f); // Amplify and clamp for SoundTouch
+                            highBuffer[j] = Math.Clamp(hpFlux * 40f, 0, 1.0f);
                             hpPrev = Math.Abs(hpSignal);
                         }
 
                         lowPassDetect.InputSamples(lowBuffer, read);
                         highPassDetect.InputSamples(highBuffer, read);
                         samplesRead += read;
+
+                        if (progressCallback != null)
+                        {
+                            double currentPassCompletion = (double)samplesRead / totalSamples;
+                            int overallPercentage = Math.Clamp(
+                                (int)(baseProgress + (currentPassCompletion * 50.0)),
+                                0,
+                                99
+                            );
+                            progressCallback.Invoke(overallPercentage);
+                        }
                     }
 
                     float lpBpm = lowPassDetect.GetBpm();
@@ -152,36 +145,22 @@ namespace VibeMP.Services.BpmAnalysis
             }
         }
 
-        /// <summary>
-        /// Resolves all collected BPM votes into a singular clamped tempo value.
-        /// </summary>
-        /// <param name="votes">A list of all calculated BPM values from the analysis phases.</param>
-        /// <returns>A finalized BPM float value rounded to 2 decimals.</returns>
         private float FinalizeBpm(List<float> votes)
         {
             if (!votes.Any())
                 return 0;
 
-            // Group votes into 3-BPM ranges to find where the numbers cluster most densely
             var grouped = votes
                 .GroupBy(v => Math.Round(v / 3.0) * 3.0)
                 .OrderByDescending(g => g.Count())
                 .First();
 
-            // Average the values inside the winning cluster
             float consensus = grouped.Average();
 
-            // If the consensus tempo is unrealistically slow, double it
             while (consensus > 0 && consensus < 70)
-            {
                 consensus *= 2;
-            }
-
-            // If the consensus tempo is unrealistically fast, halve it
             while (consensus > 190)
-            {
                 consensus /= 2;
-            }
 
             return (float)Math.Round(consensus, 2);
         }

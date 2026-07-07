@@ -1,7 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace VibeMP.Models
 {
@@ -18,7 +18,7 @@ namespace VibeMP.Models
         private string _name = string.Empty;
 
         /// <summary>
-        /// Der Ziel-BPM-Wert für diese Kategorie. 
+        /// Der Ziel-BPM-Wert für diese Kategorie.
         /// Lieder werden automatisch der Kategorie zugeordnet, deren Zielwert am nächsten liegt.
         /// </summary>
         [ObservableProperty]
@@ -32,5 +32,9 @@ namespace VibeMP.Models
         /// </summary>
         [NotMapped]
         public ObservableCollection<Track> CategoryTracks { get; } = new();
+
+        [ObservableProperty]
+        [NotMapped]
+        private string? _rowErrorMessage;
     }
 }
